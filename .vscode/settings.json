@@ -1,0 +1,19 @@
+{
+    "intelephense.stubs": [
+        "wordpress",
+        "Core",
+        "standard",
+        "SPL",
+        "date",
+        "pcre",
+        "session",
+        "json",
+        "filter"
+    ],
+    "intelephense.diagnostics.undefinedVariables": "off",
+    "php.suggest.basic": false,
+    "php.validate.enable": true,
+    "files.associations": {
+        "*.php": "php"
+    }
+}
