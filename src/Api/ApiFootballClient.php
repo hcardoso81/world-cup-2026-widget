@@ -26,18 +26,16 @@ final class ApiFootballClient
     public function fixturesByDate(string $date)
     {
         $date = $this->settings->sanitizeDate($date);
+
+        if ($this->settings->shouldUseMockFixtures() || strtolower($this->settings->apiKey()) === 'mock') {
+            return $this->mockFixturesByDate($date);
+        }
+
         $cacheKey = $this->cacheKey($date);
         $cached = get_transient($cacheKey);
 
         if (is_array($cached)) {
             return $cached;
-        }
-
-        if (strtolower($this->settings->apiKey()) === 'mock') {
-            $data = $this->mockFixturesByDate($date);
-            set_transient($cacheKey, $data, (int) $data['cache_ttl']);
-
-            return $data;
         }
 
         if ($this->settings->apiKey() === '') {

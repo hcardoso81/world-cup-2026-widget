@@ -14,6 +14,7 @@ final class Settings
     public const DEFAULT_WIDGET_THEME = 'white';
     public const DEFAULT_WIDGET_REFRESH = 60;
     public const DEFAULT_MATCH_DATE = '2022-11-20';
+    private const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
     /**
      * @return array<string, mixed>
@@ -29,6 +30,9 @@ final class Settings
             'widget_refresh' => self::DEFAULT_WIDGET_REFRESH,
             'default_game_id' => '',
             'match_date' => self::DEFAULT_MATCH_DATE,
+            'frontend_visible' => 1,
+            'simulation_enabled' => 0,
+            'simulation_mock_enabled' => 0,
         ];
     }
 
@@ -111,6 +115,41 @@ final class Settings
         return $this->sanitizeDate($date);
     }
 
+    public function isFrontendVisible(): bool
+    {
+        $settings = $this->all();
+
+        return !empty($settings['frontend_visible']);
+    }
+
+    public function isSimulationEnabled(): bool
+    {
+        $settings = $this->all();
+
+        return !empty($settings['simulation_enabled']);
+    }
+
+    public function isSimulationMockEnabled(): bool
+    {
+        $settings = $this->all();
+
+        return !empty($settings['simulation_mock_enabled']);
+    }
+
+    public function shouldUseMockFixtures(): bool
+    {
+        return $this->isSimulationEnabled() && $this->isSimulationMockEnabled();
+    }
+
+    public function shortcodeDate(): string
+    {
+        if ($this->isSimulationEnabled()) {
+            return $this->matchDate();
+        }
+
+        return $this->currentArgentinaDate();
+    }
+
     /**
      * @param array<string, mixed> $input
      * @return array<string, mixed>
@@ -126,7 +165,22 @@ final class Settings
             'widget_refresh' => $this->sanitizeWidgetRefresh($input['widget_refresh'] ?? self::DEFAULT_WIDGET_REFRESH),
             'default_game_id' => isset($input['default_game_id']) ? preg_replace('/[^0-9]/', '', (string) $input['default_game_id']) : '',
             'match_date' => $this->sanitizeDate(isset($input['match_date']) ? (string) $input['match_date'] : self::DEFAULT_MATCH_DATE),
+            'frontend_visible' => !empty($input['frontend_visible']) ? 1 : 0,
+            'simulation_enabled' => !empty($input['simulation_enabled']) ? 1 : 0,
+            'simulation_mock_enabled' => !empty($input['simulation_mock_enabled']) ? 1 : 0,
         ];
+    }
+
+    public function currentArgentinaDate(): string
+    {
+        try {
+            $timezone = new \DateTimeZone(self::ARGENTINA_TIMEZONE);
+            $date = new \DateTimeImmutable('now', $timezone);
+
+            return $date->format('Y-m-d');
+        } catch (\Exception $exception) {
+            return gmdate('Y-m-d');
+        }
     }
 
     public function sanitizeDate(string $date): string

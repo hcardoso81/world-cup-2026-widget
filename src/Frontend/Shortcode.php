@@ -207,15 +207,21 @@ final class Shortcode
      */
     public function renderMatches($atts = []): string
     {
+        if (!$this->settings->isFrontendVisible()) {
+            return '';
+        }
+
         $atts = shortcode_atts(
             [
-                'date' => $this->settings->matchDate(),
+                'date' => $this->settings->shortcodeDate(),
             ],
             is_array($atts) ? $atts : [],
             'world_cup_2026_matches'
         );
 
-        $date = $this->settings->sanitizeDate((string) $atts['date']);
+        $date = $this->settings->isSimulationEnabled()
+            ? $this->settings->sanitizeDate((string) $atts['date'])
+            : $this->settings->currentArgentinaDate();
         $data = $this->api->fixturesByDate($date);
 
         if ($data instanceof WP_Error) {
