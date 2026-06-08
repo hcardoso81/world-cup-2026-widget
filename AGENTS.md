@@ -101,7 +101,11 @@ Cuando el carrusel esta en el primer dia no debe mostrarse tooltip de dia anteri
 
 La meta de cada card debe mostrar ronda/partido y estadio en dos lineas separadas, no concatenadas en una sola linea.
 
-Los elementos visibles e interactivos del shortcode deben tener tooltips: botones del carrusel, dia visible, card, estado, hora/minuto, score, equipos, ronda y estadio.
+Los tooltips deben existir en botones del carrusel, dia visible y card. La card debe tener un solo tooltip global con el detalle del partido; no agregar tooltips por palabras internas como resultado, estado, equipos, ronda o estadio.
+
+El tooltip debe usar fondo main `--c-main: #604c8d` con texto blanco. Los tooltips de navegacion anterior/siguiente deben usar fuente significativamente mas chica que el tooltip de card.
+
+La fecha visible del carrusel debe usar color main y ser un poco mas grande que el texto meta de las cards.
 
 Los tooltips, fuentes y colores del shortcode deben heredar del theme tanto como sea posible; evitar colores hardcodeados en la UI publica.
 

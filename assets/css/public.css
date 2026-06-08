@@ -77,6 +77,7 @@ body .modal-widget-content {
 }
 
 .wc26-matches {
+    --wc26-main: var(--c-main, #604c8d);
     --wc26-matches-per-line: 4;
     color: inherit;
     font-family: inherit;
@@ -129,10 +130,10 @@ body .modal-widget-content {
 }
 
 .wc26-matches__date {
-    color: inherit;
+    color: var(--wc26-main);
     display: block;
-    font-size: 11px;
-    font-weight: inherit;
+    font-size: 13px;
+    font-weight: 700;
     line-height: 1.2;
     margin-top: 5px;
     min-width: 0;
@@ -319,11 +320,11 @@ body .modal-widget-content {
 
 [data-wc26-tooltip]:hover::after,
 [data-wc26-tooltip]:focus-visible::after {
-    background: inherit;
-    border: 1px solid currentColor;
+    background: var(--wc26-main);
+    border: 1px solid var(--wc26-main);
     border-radius: 6px;
     bottom: calc(100% + 7px);
-    color: inherit;
+    color: #ffffff;
     content: attr(data-wc26-tooltip);
     font-family: inherit;
     font-size: inherit;
@@ -341,11 +342,18 @@ body .modal-widget-content {
     z-index: 5;
 }
 
+.wc26-matches__nav[data-wc26-tooltip]:hover::after,
+.wc26-matches__nav[data-wc26-tooltip]:focus-visible::after {
+    font-size: 10px;
+    max-width: 130px;
+    padding: 4px 6px;
+}
+
 [data-wc26-tooltip]:hover::before,
 [data-wc26-tooltip]:focus-visible::before {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid currentColor;
+    border-top: 5px solid var(--wc26-main);
     bottom: calc(100% + 2px);
     content: "";
     left: 50%;

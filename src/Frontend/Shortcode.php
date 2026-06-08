@@ -587,27 +587,27 @@ final class Shortcode
         ?>
         <article class="wc26-match wc26-match--<?php echo esc_attr(strtolower($statusShort)); ?>" title="<?php echo esc_attr($this->matchTooltip($match)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
-                <span title="<?php echo esc_attr($statusLabel); ?>" data-wc26-tooltip="<?php echo esc_attr($statusLabel); ?>"><?php echo esc_html(strtoupper($statusLabel)); ?></span>
+                <span><?php echo esc_html(strtoupper($statusLabel)); ?></span>
                 <?php if ($elapsed > 0 && !in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong title="<?php echo esc_attr__('Minuto de juego', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Minuto de juego', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
+                    <strong><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
                 <?php elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong title="<?php echo esc_attr__('Hora del partido', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Hora del partido', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
+                    <strong><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
                 <?php endif; ?>
             </div>
 
             <div class="wc26-match__scoreboard">
                 <?php echo $this->renderScoreTeam($match['homeTeam'], $match['homeLogo'], 'home'); ?>
-                <strong class="wc26-match__score" title="<?php echo esc_attr__('Resultado', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Resultado', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html($score); ?></strong>
+                <strong class="wc26-match__score"><?php echo esc_html($score); ?></strong>
                 <?php echo $this->renderScoreTeam($match['awayTeam'], $match['awayLogo'], 'away'); ?>
             </div>
 
             <?php if ($match['stage'] !== '' || $match['stadium'] !== '') : ?>
                 <div class="wc26-match__meta">
                     <?php if ($match['stage'] !== '') : ?>
-                        <span title="<?php echo esc_attr($match['stage']); ?>" data-wc26-tooltip="<?php echo esc_attr($match['stage']); ?>"><?php echo esc_html($match['stage']); ?></span>
+                        <span><?php echo esc_html($match['stage']); ?></span>
                     <?php endif; ?>
                     <?php if ($match['stadium'] !== '') : ?>
-                        <span title="<?php echo esc_attr($match['stadium']); ?>" data-wc26-tooltip="<?php echo esc_attr($match['stadium']); ?>"><?php echo esc_html($match['stadium']); ?></span>
+                        <span><?php echo esc_html($match['stadium']); ?></span>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -717,7 +717,7 @@ final class Shortcode
 
         ob_start();
         ?>
-        <div class="wc26-match__team wc26-match__team--<?php echo esc_attr($side); ?>" title="<?php echo esc_attr($name); ?>" data-wc26-tooltip="<?php echo esc_attr($name); ?>">
+        <div class="wc26-match__team wc26-match__team--<?php echo esc_attr($side); ?>">
             <span><?php echo esc_html($code); ?></span>
             <?php if ($logo !== '') : ?>
                 <img src="<?php echo esc_url($logo); ?>" alt="" loading="lazy" />
