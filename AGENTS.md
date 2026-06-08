@@ -31,7 +31,7 @@ El archivo principal solo define constantes, carga autoload, registra hooks de a
 
 - `src/Bootstrap`: registra hooks.
 - `src/Admin`: pantalla de ajustes y listado de shortcodes.
-- `src/Api`: cliente HTTP propio para API-Football.
+- `src/Api`: cliente HTTP propio para API-Football y endpoint REST propio.
 - `src/Frontend`: shortcode y render propio de partidos.
 - `src/Support`: settings y logger.
 
@@ -45,6 +45,14 @@ La pantalla admin usa tabs:
 El cliente propio consulta `https://v3.football.api-sports.io/fixtures` con `league` y `season`, usando el header `x-apisports-key`. La llamada de temporada completa popula los resultados del shortcode y el frontend navega dias localmente sin nuevas llamadas.
 
 `fixturesByDate()` se conserva por compatibilidad, pero el shortcode principal debe preferir `fixturesForSeason()` para poder navegar partidos anteriores y siguientes desde memoria/render inicial.
+
+El plugin expone un endpoint tipo fetch en:
+
+- REST route: `/wp-json/wc26/v1/fixtures`
+- Clase: `src/Api/FixturesEndpoint.php`
+- JS publico que lo consume: `assets/js/public.js`
+
+El endpoint debe respetar los settings actuales: si `simulation_mock_enabled` esta activo junto con `simulation_enabled`, responde datos mock; si no, responde datos reales desde API-Football usando PHP como proxy server-side. Nunca exponer la API key al navegador.
 
 La temporada admite datos historicos desde 1930 para poder probar planes Free con `season=2022`.
 
@@ -87,9 +95,15 @@ No debe haber logica especial de "current partido" que agrande o destaque una ca
 
 La navegacion por dias debe funcionar como carrusel con botones anterior/siguiente. La API no debe llamarse al avanzar o retroceder dias; todo debe salir de los fixtures ya renderizados.
 
+Los botones del carrusel deben estar en la misma linea que la grilla de partidos, alineados verticalmente al centro. La fecha visible debe mostrarse debajo de los partidos, mas chica y alineada a la derecha.
+
+Cuando el carrusel esta en el primer dia no debe mostrarse tooltip de dia anterior. Cuando esta en el ultimo dia no debe mostrarse tooltip de dia siguiente.
+
 La meta de cada card debe mostrar ronda/partido y estadio en dos lineas separadas, no concatenadas en una sola linea.
 
 Los elementos visibles e interactivos del shortcode deben tener tooltips: botones del carrusel, dia visible, card, estado, hora/minuto, score, equipos, ronda y estadio.
+
+Los tooltips, fuentes y colores del shortcode deben heredar del theme tanto como sea posible; evitar colores hardcodeados en la UI publica.
 
 La visibilidad publica se controla con el setting `frontend_visible`. Si esta apagado, `[world_cup_2026_matches]` devuelve string vacio.
 
@@ -113,6 +127,8 @@ El mock hardcodeado debe:
 - Simular 4 partidos por dia.
 - Usar paises y estadios variados.
 - Incluir estados mezclados por dia: finalizados, en vivo y pendientes.
+- Los partidos posteriores al `2026-06-10` deben estar no iniciados (`NS`) y sin goles.
+- Los partidos no iniciados deben mostrarse con marcador `-`, no `VS` ni `0 - 0`.
 - No depender de API key ni de transients previos cuando `simulation_mock_enabled` esta activo.
 
 ## Widgets Oficiales

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HernanCardoso\WorldCup2026Widget\Frontend;
 
 use HernanCardoso\WorldCup2026Widget\Api\ApiFootballClient;
+use HernanCardoso\WorldCup2026Widget\Api\FixturesEndpoint;
 use HernanCardoso\WorldCup2026Widget\Support\Settings;
 use WP_Error;
 
@@ -248,28 +249,31 @@ final class Shortcode
             <?php if ($fixturesByDate === []) : ?>
                 <p class="wc26-matches__empty"><?php echo esc_html__('No matches found for this date.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php else : ?>
-                <div class="wc26-matches__toolbar">
+                <div class="wc26-matches__carousel">
                     <button class="wc26-matches__nav" type="button" data-wc26-prev aria-label="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>" title="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>">
                         <span aria-hidden="true">&lsaquo;</span>
                     </button>
-                    <strong class="wc26-matches__date" data-wc26-date-label title="<?php echo esc_attr__('Dia visible', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Dia visible', WC26_WIDGET_TEXT_DOMAIN); ?>">
-                        <?php echo esc_html($this->formatDate($activeDate)); ?>
-                    </strong>
+
+                    <div class="wc26-matches__content">
+                        <div class="wc26-matches__days">
+                            <?php foreach ($fixturesByDate as $fixtureDate => $dayFixtures) : ?>
+                                <div class="wc26-matches__day" data-wc26-day="<?php echo esc_attr($fixtureDate); ?>" data-wc26-label="<?php echo esc_attr($this->formatDate($fixtureDate)); ?>" <?php echo $fixtureDate === $activeDate ? '' : 'hidden'; ?>>
+                                    <div class="wc26-matches__list">
+                                        <?php foreach ($dayFixtures as $fixture) : ?>
+                                            <?php echo $this->renderFixture($fixture); ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                            <strong class="wc26-matches__date" data-wc26-date-label title="<?php echo esc_attr($this->formatDate($activeDate)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->formatDate($activeDate)); ?>">
+                                <?php echo esc_html($this->formatDate($activeDate)); ?>
+                            </strong>
+                        </div>
+                    </div>
+
                     <button class="wc26-matches__nav" type="button" data-wc26-next aria-label="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>" title="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>">
                         <span aria-hidden="true">&rsaquo;</span>
                     </button>
-                </div>
-
-                <div class="wc26-matches__days">
-                    <?php foreach ($fixturesByDate as $fixtureDate => $dayFixtures) : ?>
-                        <div class="wc26-matches__day" data-wc26-day="<?php echo esc_attr($fixtureDate); ?>" data-wc26-label="<?php echo esc_attr($this->formatDate($fixtureDate)); ?>" <?php echo $fixtureDate === $activeDate ? '' : 'hidden'; ?>>
-                            <div class="wc26-matches__list">
-                                <?php foreach ($dayFixtures as $fixture) : ?>
-                                    <?php echo $this->renderFixture($fixture); ?>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </section>
@@ -348,6 +352,14 @@ final class Shortcode
             [],
             WC26_WIDGET_VERSION,
             true
+        );
+
+        wp_add_inline_script(
+            'wc26-widget-public',
+            'window.WC26Widget = ' . wp_json_encode([
+                'fixturesUrl' => esc_url_raw(rest_url(FixturesEndpoint::NAMESPACE . FixturesEndpoint::ROUTE)),
+            ]) . ';',
+            'before'
         );
 
         $this->publicScriptEnqueued = true;
@@ -569,7 +581,7 @@ final class Shortcode
         $elapsed = $match['elapsed'];
         $date = $match['date'];
         $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true);
-        $score = $isNotStarted ? 'VS' : $this->formatScore($match);
+        $score = $isNotStarted ? '-' : $this->formatScore($match);
 
         ob_start();
         ?>

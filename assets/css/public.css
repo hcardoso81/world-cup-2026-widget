@@ -1,9 +1,9 @@
 .wc26-widgets-page,
 .wc26-widget-embed {
-    --wc26-ink: #172026;
-    --wc26-muted: #64717b;
-    --wc26-line: #dde5ea;
-    color: var(--wc26-ink);
+    --wc26-ink: inherit;
+    --wc26-muted: currentColor;
+    --wc26-line: currentColor;
+    color: inherit;
     font-family: inherit;
     margin: 24px 0;
 }
@@ -45,9 +45,9 @@
 }
 
 .wc26-widget-error {
-    border: 1px solid #d63638;
+    border: 1px solid currentColor;
     border-radius: 8px;
-    color: #8a2424;
+    color: inherit;
     margin: 24px 0;
     padding: 12px;
 }
@@ -59,8 +59,8 @@
 }
 
 .wc26-widget-error__details {
-    background: #fff7f7;
-    border: 1px solid #f0c2c2;
+    background: transparent;
+    border: 1px solid currentColor;
     border-radius: 6px;
     margin: 10px 0 0;
     padding: 10px;
@@ -77,17 +77,21 @@ body .modal-widget-content {
 }
 
 .wc26-matches {
-    --wc26-accent: #0f7f6d;
-    --wc26-ink: #172026;
-    --wc26-muted: #6b7882;
-    --wc26-soft: #f7f9fa;
-    --wc26-line: #e6ecef;
-    --wc26-live: #0f7f6d;
-    --wc26-done: #4c7a18;
     --wc26-matches-per-line: 4;
-    color: var(--wc26-ink);
+    color: inherit;
     font-family: inherit;
     margin: 16px 0;
+}
+
+.wc26-matches__carousel {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+}
+
+.wc26-matches__content {
+    min-width: 0;
 }
 
 .wc26-matches__list {
@@ -96,22 +100,15 @@ body .modal-widget-content {
     grid-template-columns: repeat(var(--wc26-matches-per-line), minmax(0, 1fr));
 }
 
-.wc26-matches__toolbar {
-    align-items: center;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: 32px minmax(0, 1fr) 32px;
-    margin-bottom: 8px;
-}
-
 .wc26-matches__nav {
     align-items: center;
-    background: #ffffff;
-    border: 1px solid var(--wc26-line);
+    background: transparent;
+    border: 1px solid currentColor;
     border-radius: 6px;
-    color: var(--wc26-ink);
+    color: inherit;
     cursor: pointer;
     display: inline-flex;
+    font-family: inherit;
     font-size: 20px;
     font-weight: 700;
     height: 32px;
@@ -123,8 +120,7 @@ body .modal-widget-content {
 
 .wc26-matches__nav:hover,
 .wc26-matches__nav:focus {
-    border-color: var(--wc26-accent);
-    color: var(--wc26-accent);
+    color: inherit;
 }
 
 .wc26-matches__nav:disabled {
@@ -133,13 +129,15 @@ body .modal-widget-content {
 }
 
 .wc26-matches__date {
-    color: var(--wc26-ink);
+    color: inherit;
     display: block;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: inherit;
+    line-height: 1.2;
+    margin-top: 5px;
     min-width: 0;
     overflow: hidden;
-    text-align: center;
+    text-align: right;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -149,8 +147,8 @@ body .modal-widget-content {
 }
 
 .wc26-matches__empty {
-    background: var(--wc26-soft);
-    border: 1px solid var(--wc26-line);
+    background: transparent;
+    border: 1px solid currentColor;
     border-radius: 8px;
     margin: 0;
     padding: 16px;
@@ -158,10 +156,9 @@ body .modal-widget-content {
 
 .wc26-match {
     align-items: center;
-    background: #ffffff;
-    border: 1px solid var(--wc26-line);
+    background: transparent;
+    border: 1px solid currentColor;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(6, 24, 40, 0.05);
     display: grid;
     gap: 7px;
     justify-items: center;
@@ -173,24 +170,23 @@ body .modal-widget-content {
 .wc26-match--ft,
 .wc26-match--pen,
 .wc26-match--aet {
-    background: #fbfcfc;
+    background: transparent;
 }
 
 .wc26-match--ns,
 .wc26-match--tbd {
-    background: #ffffff;
+    background: transparent;
 }
 
 .wc26-match--1h,
 .wc26-match--2h,
 .wc26-match--live {
-    border-color: rgba(15, 127, 109, 0.28);
-    box-shadow: 0 5px 14px rgba(15, 127, 109, 0.12);
+    border-color: currentColor;
 }
 
 .wc26-match__status {
     align-items: center;
-    color: var(--wc26-done);
+    color: inherit;
     display: flex;
     flex-wrap: wrap;
     font-size: 9px;
@@ -203,13 +199,14 @@ body .modal-widget-content {
 }
 
 .wc26-match__status span {
-    background: #eef5e9;
+    background: transparent;
+    border: 1px solid currentColor;
     border-radius: 999px;
     padding: 2px 6px;
 }
 
 .wc26-match__status strong {
-    color: var(--wc26-muted);
+    color: inherit;
     font-size: 9px;
     font-weight: 600;
     text-transform: none;
@@ -218,29 +215,29 @@ body .modal-widget-content {
 .wc26-match--1h .wc26-match__status,
 .wc26-match--2h .wc26-match__status,
 .wc26-match--live .wc26-match__status {
-    color: var(--wc26-live);
+    color: inherit;
 }
 
 .wc26-match--1h .wc26-match__status span,
 .wc26-match--2h .wc26-match__status span,
 .wc26-match--live .wc26-match__status span {
-    background: #e7f4f1;
+    background: transparent;
 }
 
 .wc26-match--1h .wc26-match__status strong,
 .wc26-match--2h .wc26-match__status strong,
 .wc26-match--live .wc26-match__status strong {
-    color: var(--wc26-live);
+    color: inherit;
 }
 
 .wc26-match--ns .wc26-match__status,
 .wc26-match--tbd .wc26-match__status {
-    color: #6b7882;
+    color: inherit;
 }
 
 .wc26-match--ns .wc26-match__status span,
 .wc26-match--tbd .wc26-match__status span {
-    background: #f0f3f5;
+    background: transparent;
 }
 
 .wc26-match__scoreboard {
@@ -275,7 +272,7 @@ body .modal-widget-content {
 }
 
 .wc26-match__team span {
-    color: #24313a;
+    color: inherit;
     font-size: 11px;
     font-weight: 700;
     line-height: 1;
@@ -287,7 +284,7 @@ body .modal-widget-content {
 }
 
 .wc26-match__score {
-    color: #13202a;
+    color: inherit;
     font-size: 19px;
     font-weight: 800;
     letter-spacing: 0;
@@ -297,7 +294,7 @@ body .modal-widget-content {
 }
 
 .wc26-match__meta {
-    color: var(--wc26-muted);
+    color: inherit;
     display: grid;
     gap: 1px;
     font-size: 9px;
@@ -322,13 +319,15 @@ body .modal-widget-content {
 
 [data-wc26-tooltip]:hover::after,
 [data-wc26-tooltip]:focus-visible::after {
-    background: #172026;
+    background: inherit;
+    border: 1px solid currentColor;
     border-radius: 6px;
     bottom: calc(100% + 7px);
-    color: #ffffff;
+    color: inherit;
     content: attr(data-wc26-tooltip);
-    font-size: 11px;
-    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
     left: 50%;
     line-height: 1.25;
     max-width: 220px;
@@ -346,7 +345,7 @@ body .modal-widget-content {
 [data-wc26-tooltip]:focus-visible::before {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid #172026;
+    border-top: 5px solid currentColor;
     bottom: calc(100% + 2px);
     content: "";
     left: 50%;
