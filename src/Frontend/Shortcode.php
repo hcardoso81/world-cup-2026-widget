@@ -214,11 +214,16 @@ final class Shortcode
         $atts = shortcode_atts(
             [
                 'date' => $this->settings->shortcodeDate(),
+                'amount_match_per_line' => '',
+                'matches_per_line' => $this->settings->matchesPerLine(),
             ],
             is_array($atts) ? $atts : [],
             'world_cup_2026_matches'
         );
 
+        $matchesPerLine = (string) $atts['amount_match_per_line'] !== ''
+            ? $this->sanitizeMatchesPerLine($atts['amount_match_per_line'])
+            : $this->sanitizeMatchesPerLine($atts['matches_per_line']);
         $date = $this->settings->isSimulationEnabled()
             ? $this->settings->sanitizeDate((string) $atts['date'])
             : $this->settings->currentArgentinaDate();
@@ -234,7 +239,7 @@ final class Shortcode
 
         ob_start();
         ?>
-        <section class="wc26-matches" aria-label="<?php echo esc_attr(sprintf(__('World Cup matches for %s', WC26_WIDGET_TEXT_DOMAIN), $date)); ?>">
+        <section class="wc26-matches" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>;" aria-label="<?php echo esc_attr(sprintf(__('World Cup matches for %s', WC26_WIDGET_TEXT_DOMAIN), $date)); ?>">
             <?php if ($fixtures === []) : ?>
                 <p class="wc26-matches__empty"><?php echo esc_html__('No matches found for this date.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php else : ?>
@@ -415,6 +420,24 @@ final class Shortcode
     private function sanitizeNumericId(string $id): string
     {
         return preg_replace('/[^0-9]/', '', $id) ?: '';
+    }
+
+    /**
+     * @param mixed $amount
+     */
+    private function sanitizeMatchesPerLine($amount): int
+    {
+        $amount = absint($amount);
+
+        if ($amount < 1) {
+            return 1;
+        }
+
+        if ($amount > 4) {
+            return 4;
+        }
+
+        return $amount;
     }
 
     /**

@@ -81,13 +81,8 @@ final class SettingsPage
         <div class="wrap">
             <?php $this->renderAdminStyles(); ?>
 
-            <div class="wc26-admin-header">
-                <span class="wc26-admin-header__icon" aria-hidden="true"><?php echo $this->trophySvg(); ?></span>
-                <div>
-                    <h1><?php echo esc_html__('World Cup 2026 Widget', WC26_WIDGET_TEXT_DOMAIN); ?></h1>
-                    <p><?php echo esc_html__('Configuracion del shortcode propio de partidos.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
-                </div>
-            </div>
+            <h1><?php echo esc_html__('World Cup 2026 Widget', WC26_WIDGET_TEXT_DOMAIN); ?></h1>
+            <p class="wc26-admin-intro"><?php echo esc_html__('Configuracion del shortcode propio de partidos.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
 
             <?php settings_errors(Settings::OPTION_NAME); ?>
 
@@ -209,7 +204,7 @@ final class SettingsPage
                         </label>
                         <p class="description"><?php echo esc_html__('Cuando esta opcion esta activa, el shortcode usa fixtures de prueba de la Copa y no llama a API-Football.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
 
-                        <label for="wc26_widget_match_date"><?php echo esc_html__('Match date for custom shortcode', WC26_WIDGET_TEXT_DOMAIN); ?></label>
+                        <label for="wc26_widget_match_date"><?php echo esc_html__('Current day simulado', WC26_WIDGET_TEXT_DOMAIN); ?></label>
                         <input
                             id="wc26_widget_match_date"
                             class="regular-text"
@@ -217,7 +212,7 @@ final class SettingsPage
                             name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[match_date]"
                             value="<?php echo esc_attr((string) $settings['match_date']); ?>"
                         />
-                        <p class="description"><?php echo esc_html__('Solo se usa cuando la simulacion esta habilitada. Con simulacion apagada, el shortcode usa la fecha actual de Argentina.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
+                        <p class="description"><?php echo esc_html__('Solo se usa cuando la simulacion esta habilitada. Para el mockup hardcodeado, usa una fecha entre 2026-06-08 y 2026-06-13. Con simulacion apagada, el shortcode usa la fecha actual de Argentina.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
                     </div>
                 </div>
             </details>
@@ -245,6 +240,20 @@ final class SettingsPage
                 <span><?php echo esc_html__('Mostrar widget en el shortcode', WC26_WIDGET_TEXT_DOMAIN); ?></span>
             </label>
             <p class="description"><?php echo esc_html__('Si esta opcion esta desmarcada, [world_cup_2026_matches] no renderiza contenido.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
+            <p>
+                <label for="wc26_widget_matches_per_line"><?php echo esc_html__('Partidos por linea', WC26_WIDGET_TEXT_DOMAIN); ?></label>
+                <select
+                    id="wc26_widget_matches_per_line"
+                    name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[matches_per_line]"
+                >
+                    <?php foreach ([4, 3, 2, 1] as $amount) : ?>
+                        <option value="<?php echo esc_attr((string) $amount); ?>" <?php selected((int) $settings['matches_per_line'], $amount); ?>>
+                            <?php echo esc_html((string) $amount); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </p>
+            <p class="description"><?php echo esc_html__('Tambien podes sobrescribirlo en el shortcode con amount_match_per_line="4", "3", "2" o "1".', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <p class="description">
                 <?php echo esc_html__('Fecha normal del shortcode:', WC26_WIDGET_TEXT_DOMAIN); ?>
                 <code><?php echo esc_html($this->settings->currentArgentinaDate()); ?></code>
@@ -325,7 +334,10 @@ final class SettingsPage
     private function shortcodes(): array
     {
         return [
-            __('Matches for current Argentina date', WC26_WIDGET_TEXT_DOMAIN) => '[world_cup_2026_matches]',
+            __('Matches for current Argentina date', WC26_WIDGET_TEXT_DOMAIN) => sprintf(
+                '[world_cup_2026_matches amount_match_per_line="%d"]',
+                $this->settings->matchesPerLine()
+            ),
         ];
     }
 
@@ -378,51 +390,12 @@ final class SettingsPage
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    private function trophySvg(): string
-    {
-        return '<svg viewBox="0 0 20 20" focusable="false" aria-hidden="true"><path d="M6 2h8v2h3v3c0 2.4-1.7 4.4-4 4.9V14h2v2H5v-2h2v-2.1C4.7 11.4 3 9.4 3 7V4h3V2Zm2 2v4c0 1.1.9 2 2 2s2-.9 2-2V4H8ZM5 6v1c0 1.2.8 2.3 2 2.8V6H5Zm8 3.8c1.2-.5 2-1.6 2-2.8V6h-2v3.8Z"/></svg>';
-    }
-
     private function renderAdminStyles(): void
     {
         ?>
         <style>
-            .wc26-admin-header {
-                align-items: center;
-                background: #0b1f18;
-                border-radius: 8px;
-                color: #fff;
-                display: flex;
-                gap: 16px;
-                margin: 18px 0;
-                padding: 18px 20px;
-            }
-
-            .wc26-admin-header h1 {
-                color: #fff;
-                margin: 0;
-                padding: 0;
-            }
-
-            .wc26-admin-header p {
-                color: #d9efe7;
-                margin: 4px 0 0;
-            }
-
-            .wc26-admin-header__icon {
-                align-items: center;
-                background: #d6ad42;
-                border-radius: 8px;
-                display: flex;
-                height: 44px;
-                justify-content: center;
-                width: 44px;
-            }
-
-            .wc26-admin-header__icon svg {
-                fill: #0b1f18;
-                height: 28px;
-                width: 28px;
+            .wc26-admin-intro {
+                margin: 4px 0 18px;
             }
 
             .wc26-admin-tabs {

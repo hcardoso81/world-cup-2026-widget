@@ -15,6 +15,16 @@
 - Scripts externos: ninguno para el shortcode propio de cards.
 - Dependencias: WordPress Plugin API. Sin Composer.
 
+## Criterios de desarrollo
+
+- Mantener modulos y metodos chicos, con responsabilidades claras.
+- Reutilizar helpers existentes antes de crear logica duplicada.
+- Evitar archivos o clases gigantes; si una funcion crece demasiado, extraer partes con nombres claros.
+- Usar CSS para layout y estados visuales, evitando estilos inline salvo variables dinamicas pequeñas y controladas.
+- Priorizar clean code: nombres descriptivos, validacion cerca de la entrada, sanitizacion explicita y bajo acoplamiento.
+- No hacer refactors amplios si no son necesarios para el cambio pedido.
+- Al finalizar cualquier cambio, incluir un mensaje de commit sugerido.
+
 ## Arquitectura
 
 El archivo principal solo define constantes, carga autoload, registra hooks de activacion y delega el arranque.
@@ -25,14 +35,27 @@ El archivo principal solo define constantes, carga autoload, registra hooks de a
 - `src/Frontend`: shortcode y render propio de partidos.
 - `src/Support`: settings y logger.
 
+La pantalla admin debe estar como item principal de menu `World Cup 2026`, con icono de copa del mundo, no dentro de `Ajustes`.
+
+La pantalla admin usa tabs:
+
+- `Backend`: API key, league, season, logs y herramientas de simulacion.
+- `Front end`: visibilidad del shortcode y cantidad de partidos por linea.
+
 El cliente propio consulta `https://v3.football.api-sports.io/fixtures` con `league`, `season` y `date`, usando el header `x-apisports-key`.
 
 La temporada admite datos historicos desde 1930 para poder probar planes Free con `season=2022`.
 
 ## Shortcodes
 
-- `[world_cup_2026_matches]`: tarjetas propias de partidos para la fecha configurada.
-- `[world_cup_2026_matches date="2026-06-11"]`: tarjetas propias para una fecha explicita.
+- `[world_cup_2026_matches]`: tarjetas propias de partidos para la fecha actual de Argentina.
+- `[world_cup_2026_matches amount_match_per_line="4"]`: renderiza hasta 4 partidos por linea en desktop.
+- `[world_cup_2026_matches amount_match_per_line="3"]`: renderiza hasta 3 partidos por linea en desktop.
+- `[world_cup_2026_matches amount_match_per_line="2"]`: renderiza hasta 2 partidos por linea en desktop.
+- `[world_cup_2026_matches amount_match_per_line="1"]`: renderiza 1 partido por linea.
+- `[world_cup_2026_matches date="2026-06-11"]`: fecha explicita solo debe afectar cuando la simulacion esta habilitada.
+
+Tambien se acepta `matches_per_line` como alias interno/configurable, pero el shortcode generado para copiar debe usar `amount_match_per_line`.
 
 `[world_cup_2026]` queda solo como compatibilidad hacia atras.
 
@@ -40,7 +63,7 @@ Los shortcodes de widgets oficiales permanecen registrados, pero responden con u
 
 ## Render Propio
 
-El shortcode propio renderiza solo las cards de partidos, sin cabecera, cache visible ni URL de debug. Cada fixture de API-Football se normaliza internamente a:
+El shortcode propio renderiza solo las cards de partidos del dia, sin cabecera, cache visible ni URL de debug. Cada fixture de API-Football se normaliza internamente a:
 
 - `id`
 - `date`
@@ -56,7 +79,33 @@ El shortcode propio renderiza solo las cards de partidos, sin cabecera, cache vi
 - `statusLabel`
 - `penalties`
 
-El mock debe respetar la estructura cruda de API-Football (`fixture`, `league`, `teams`, `goals`, `score`) y ordenar los partidos por fecha ascendente. Para la demo, los partidos anteriores al actual deben verse finalizados, el actual en vivo y los posteriores pendientes.
+La grilla de cards usa CSS Grid y una variable CSS `--wc26-matches-per-line`. Debe poder mostrar 4 partidos en una linea en desktop, con UI compacta para que entren los 4 partidos y sus 8 logos/banderas. En mobile debe priorizar legibilidad y puede caer a 1 columna.
+
+No debe haber logica especial de "current partido" que agrande o destaque una card rompiendo la grilla. Los estados en vivo pueden tener color/borde, pero no cambiar el ancho.
+
+La visibilidad publica se controla con el setting `frontend_visible`. Si esta apagado, `[world_cup_2026_matches]` devuelve string vacio.
+
+## Simulacion y Mockup
+
+La simulacion vive en el tab `Backend`, dentro de un desplegable llamado `Simulacion`.
+
+Opciones:
+
+- `simulation_enabled`: habilita el uso de un `current day` simulado.
+- `match_date`: actua como `Current day simulado`; solo se usa cuando `simulation_enabled` esta activo.
+- `simulation_mock_enabled`: cuando esta activo junto con `simulation_enabled`, el shortcode usa datos hardcodeados y no llama a API-Football.
+
+Con simulacion apagada, el shortcode siempre usa la fecha actual del sistema en zona horaria de Argentina (`America/Argentina/Buenos_Aires`).
+
+El mock hardcodeado debe:
+
+- Respetar la estructura cruda de API-Football (`fixture`, `league`, `teams`, `goals`, `score`).
+- Ordenar los partidos por fecha ascendente.
+- Cubrir desde `2026-06-08` hasta `2026-06-13`.
+- Simular 4 partidos por dia.
+- Usar paises y estadios variados.
+- Incluir estados mezclados por dia: finalizados, en vivo y pendientes.
+- No depender de API key ni de transients previos cuando `simulation_mock_enabled` esta activo.
 
 ## Widgets Oficiales
 
@@ -94,7 +143,7 @@ Registra:
 - Errores fatales cuyo archivo pertenece al plugin.
 - Excepciones durante el boot.
 
-La pantalla `Ajustes > World Cup 2026` muestra las ultimas lineas. La carpeta `logs/` debe mantener `index.php` y `.htaccess`.
+La pantalla `World Cup 2026` muestra las ultimas lineas. La carpeta `logs/` debe mantener `index.php` y `.htaccess`.
 
 ## IDE
 
