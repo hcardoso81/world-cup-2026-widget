@@ -110,6 +110,90 @@ final class ApiFootballClient
         return $data;
     }
 
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public function fixturesForSeason()
+    {
+        if ($this->settings->shouldUseMockFixtures() || strtolower($this->settings->apiKey()) === 'mock') {
+            return $this->mockFixturesForSeason();
+        }
+
+        $cacheKey = $this->seasonCacheKey();
+        $cached = get_transient($cacheKey);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        if ($this->settings->apiKey() === '') {
+            return new WP_Error(
+                'wc26_api_missing_key',
+                __('API-Football key is not configured.', WC26_WIDGET_TEXT_DOMAIN)
+            );
+        }
+
+        $url = $this->fixturesSeasonUrl();
+
+        $response = wp_remote_get($url, [
+            'timeout' => 15,
+            'headers' => [
+                'x-apisports-key' => $this->settings->apiKey(),
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            Logger::warning('API-Football season request failed', [
+                'error' => $response->get_error_message(),
+            ]);
+
+            return $response;
+        }
+
+        $statusCode = (int) wp_remote_retrieve_response_code($response);
+        $body = (string) wp_remote_retrieve_body($response);
+        $payload = json_decode($body, true);
+
+        if ($statusCode < 200 || $statusCode >= 300 || !is_array($payload)) {
+            Logger::warning('API-Football returned an invalid season response', [
+                'status_code' => $statusCode,
+            ]);
+
+            return new WP_Error(
+                'wc26_api_invalid_response',
+                __('API-Football returned an invalid response.', WC26_WIDGET_TEXT_DOMAIN)
+            );
+        }
+
+        $apiErrors = $payload['errors'] ?? [];
+        if (is_array($apiErrors) && $apiErrors !== []) {
+            Logger::warning('API-Football returned season errors', [
+                'url' => $url,
+                'errors' => $apiErrors,
+            ]);
+
+            return new WP_Error(
+                'wc26_api_error',
+                __('API-Football rejected the request. Check the API key and account limits.', WC26_WIDGET_TEXT_DOMAIN),
+                [
+                    'request_url' => $url,
+                    'api_errors' => $apiErrors,
+                ]
+            );
+        }
+
+        $fixtures = isset($payload['response']) && is_array($payload['response']) ? $payload['response'] : [];
+        $data = [
+            'fixtures' => $fixtures,
+            'fetched_at' => time(),
+            'cache_ttl' => $this->cacheTtl($fixtures),
+        ];
+
+        set_transient($cacheKey, $data, (int) $data['cache_ttl']);
+
+        return $data;
+    }
+
     private function cacheKey(string $date): string
     {
         return self::cacheKeyFor(
@@ -129,6 +213,11 @@ final class ApiFootballClient
         );
     }
 
+    public static function seasonCacheKeyFor(int $leagueId, int $season): string
+    {
+        return sprintf('wc26_fixtures_%d_%d_all', $leagueId, $season);
+    }
+
     public function fixturesUrl(string $date): string
     {
         return add_query_arg(
@@ -139,6 +228,26 @@ final class ApiFootballClient
                 'timezone' => $this->timezone(),
             ],
             self::BASE_URL . '/fixtures'
+        );
+    }
+
+    public function fixturesSeasonUrl(): string
+    {
+        return add_query_arg(
+            [
+                'league' => $this->settings->leagueId(),
+                'season' => $this->settings->season(),
+                'timezone' => $this->timezone(),
+            ],
+            self::BASE_URL . '/fixtures'
+        );
+    }
+
+    private function seasonCacheKey(): string
+    {
+        return self::seasonCacheKeyFor(
+            $this->settings->leagueId(),
+            $this->settings->season()
         );
     }
 
@@ -180,30 +289,7 @@ final class ApiFootballClient
      */
     private function mockFixturesByDate(string $date): array
     {
-        $schedule = $this->mockSchedule();
-        $fixtures = [];
-
-        if (isset($schedule[$date])) {
-            foreach ($schedule[$date] as $index => $match) {
-                $fixtures[] = $this->mockFixture(
-                    202606080 + ((int) str_replace('-', '', $date) - 20260608) * 10 + $index + 1,
-                    $date . 'T' . $match['time'] . ':00+00:00',
-                    $match['status_long'],
-                    $match['status_short'],
-                    $match['elapsed'],
-                    $match['venue'],
-                    $match['round'],
-                    $match['home_id'],
-                    $match['home'],
-                    $this->teamLogo($match['home_id']),
-                    $match['away_id'],
-                    $match['away'],
-                    $this->teamLogo($match['away_id']),
-                    $match['home_goals'],
-                    $match['away_goals']
-                );
-            }
-        }
+        $fixtures = $this->mockFixturesForDate($date);
 
         usort($fixtures, static function (array $first, array $second): int {
             return strcmp(
@@ -230,6 +316,79 @@ final class ApiFootballClient
             'cache_ttl' => $this->cacheTtl($fixtures),
             'mock' => true,
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mockFixturesForSeason(): array
+    {
+        $fixtures = [];
+
+        foreach (array_keys($this->mockSchedule()) as $date) {
+            $fixtures = array_merge($fixtures, $this->mockFixturesForDate((string) $date));
+        }
+
+        usort($fixtures, static function (array $first, array $second): int {
+            return strcmp(
+                (string) ($first['fixture']['date'] ?? ''),
+                (string) ($second['fixture']['date'] ?? '')
+            );
+        });
+
+        return [
+            'get' => 'fixtures',
+            'parameters' => [
+                'league' => 1,
+                'season' => 2026,
+            ],
+            'errors' => [],
+            'results' => count($fixtures),
+            'paging' => [
+                'current' => 1,
+                'total' => 1,
+            ],
+            'fixtures' => $fixtures,
+            'response' => $fixtures,
+            'fetched_at' => time(),
+            'cache_ttl' => $this->cacheTtl($fixtures),
+            'mock' => true,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function mockFixturesForDate(string $date): array
+    {
+        $schedule = $this->mockSchedule();
+        $fixtures = [];
+
+        if (!isset($schedule[$date])) {
+            return $fixtures;
+        }
+
+        foreach ($schedule[$date] as $index => $match) {
+            $fixtures[] = $this->mockFixture(
+                202606080 + ((int) str_replace('-', '', $date) - 20260608) * 10 + $index + 1,
+                $date . 'T' . $match['time'] . ':00+00:00',
+                $match['status_long'],
+                $match['status_short'],
+                $match['elapsed'],
+                $match['venue'],
+                $match['round'],
+                $match['home_id'],
+                $match['home'],
+                $this->teamLogo($match['home_id']),
+                $match['away_id'],
+                $match['away'],
+                $this->teamLogo($match['away_id']),
+                $match['home_goals'],
+                $match['away_goals']
+            );
+        }
+
+        return $fixtures;
     }
 
     /**

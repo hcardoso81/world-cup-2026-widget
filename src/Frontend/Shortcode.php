@@ -13,6 +13,7 @@ final class Shortcode
     private Settings $settings;
     private ApiFootballClient $api;
     private bool $stylesEnqueued = false;
+    private bool $publicScriptEnqueued = false;
     private bool $widgetScriptEnqueued = false;
     private static int $instance = 0;
 
@@ -227,27 +228,47 @@ final class Shortcode
         $date = $this->settings->isSimulationEnabled()
             ? $this->settings->sanitizeDate((string) $atts['date'])
             : $this->settings->currentArgentinaDate();
-        $data = $this->api->fixturesByDate($date);
+        $data = $this->api->fixturesForSeason();
 
         if ($data instanceof WP_Error) {
             return $this->renderError($data);
         }
 
-        $this->enqueuePublicStyles();
+        $this->enqueuePublicAssets();
 
         $fixtures = isset($data['fixtures']) && is_array($data['fixtures']) ? $data['fixtures'] : [];
+        $fixturesByDate = $this->groupFixturesByDate($fixtures);
+        $dates = array_keys($fixturesByDate);
+        $activeDate = $this->activeCarouselDate($dates, $date);
+        $carouselId = $this->nextId('wc26-matches-carousel');
 
         ob_start();
         ?>
-        <section class="wc26-matches" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>;" aria-label="<?php echo esc_attr(sprintf(__('World Cup matches for %s', WC26_WIDGET_TEXT_DOMAIN), $date)); ?>">
-            <?php if ($fixtures === []) : ?>
+        <section id="<?php echo esc_attr($carouselId); ?>" class="wc26-matches" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>;" data-wc26-carousel aria-label="<?php echo esc_attr__('World Cup matches by day', WC26_WIDGET_TEXT_DOMAIN); ?>">
+            <?php if ($fixturesByDate === []) : ?>
                 <p class="wc26-matches__empty"><?php echo esc_html__('No matches found for this date.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php else : ?>
-                <div class="wc26-matches__list">
-                    <?php foreach ($fixtures as $fixture) : ?>
-                        <?php if (is_array($fixture)) : ?>
-                            <?php echo $this->renderFixture($fixture); ?>
-                        <?php endif; ?>
+                <div class="wc26-matches__toolbar">
+                    <button class="wc26-matches__nav" type="button" data-wc26-prev aria-label="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>" title="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Ver dia anterior', WC26_WIDGET_TEXT_DOMAIN); ?>">
+                        <span aria-hidden="true">&lsaquo;</span>
+                    </button>
+                    <strong class="wc26-matches__date" data-wc26-date-label title="<?php echo esc_attr__('Dia visible', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Dia visible', WC26_WIDGET_TEXT_DOMAIN); ?>">
+                        <?php echo esc_html($this->formatDate($activeDate)); ?>
+                    </strong>
+                    <button class="wc26-matches__nav" type="button" data-wc26-next aria-label="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>" title="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Ver dia siguiente', WC26_WIDGET_TEXT_DOMAIN); ?>">
+                        <span aria-hidden="true">&rsaquo;</span>
+                    </button>
+                </div>
+
+                <div class="wc26-matches__days">
+                    <?php foreach ($fixturesByDate as $fixtureDate => $dayFixtures) : ?>
+                        <div class="wc26-matches__day" data-wc26-day="<?php echo esc_attr($fixtureDate); ?>" data-wc26-label="<?php echo esc_attr($this->formatDate($fixtureDate)); ?>" <?php echo $fixtureDate === $activeDate ? '' : 'hidden'; ?>>
+                            <div class="wc26-matches__list">
+                                <?php foreach ($dayFixtures as $fixture) : ?>
+                                    <?php echo $this->renderFixture($fixture); ?>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -311,6 +332,25 @@ final class Shortcode
         );
 
         $this->stylesEnqueued = true;
+    }
+
+    private function enqueuePublicAssets(): void
+    {
+        $this->enqueuePublicStyles();
+
+        if ($this->publicScriptEnqueued) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'wc26-widget-public',
+            WC26_WIDGET_URL . 'assets/js/public.js',
+            [],
+            WC26_WIDGET_VERSION,
+            true
+        );
+
+        $this->publicScriptEnqueued = true;
     }
 
     public function filterWidgetScriptTag(string $tag, string $handle, string $src): string
@@ -441,6 +481,84 @@ final class Shortcode
     }
 
     /**
+     * @param array<int, mixed> $fixtures
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function groupFixturesByDate(array $fixtures): array
+    {
+        $grouped = [];
+
+        foreach ($fixtures as $fixture) {
+            if (!is_array($fixture)) {
+                continue;
+            }
+
+            $date = $this->fixtureDate($fixture);
+
+            if ($date === '') {
+                continue;
+            }
+
+            if (!isset($grouped[$date])) {
+                $grouped[$date] = [];
+            }
+
+            $grouped[$date][] = $fixture;
+        }
+
+        ksort($grouped);
+
+        foreach ($grouped as $date => $dayFixtures) {
+            usort($dayFixtures, static function (array $first, array $second): int {
+                return strcmp(
+                    (string) ($first['fixture']['date'] ?? ''),
+                    (string) ($second['fixture']['date'] ?? '')
+                );
+            });
+
+            $grouped[$date] = $dayFixtures;
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * @param array<string, mixed> $fixture
+     */
+    private function fixtureDate(array $fixture): string
+    {
+        $date = (string) ($fixture['fixture']['date'] ?? '');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $date) !== 1) {
+            return '';
+        }
+
+        return substr($date, 0, 10);
+    }
+
+    /**
+     * @param array<int, string> $dates
+     */
+    private function activeCarouselDate(array $dates, string $targetDate): string
+    {
+        if ($dates === []) {
+            return $targetDate;
+        }
+
+        if (in_array($targetDate, $dates, true)) {
+            return $targetDate;
+        }
+
+        foreach ($dates as $date) {
+            if ($date >= $targetDate) {
+                return $date;
+            }
+        }
+
+        return (string) end($dates);
+    }
+
+    /**
      * @param array<string, mixed> $fixture
      */
     private function renderFixture(array $fixture): string
@@ -455,25 +573,30 @@ final class Shortcode
 
         ob_start();
         ?>
-        <article class="wc26-match wc26-match--<?php echo esc_attr(strtolower($statusShort)); ?>">
+        <article class="wc26-match wc26-match--<?php echo esc_attr(strtolower($statusShort)); ?>" title="<?php echo esc_attr($this->matchTooltip($match)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
-                <span><?php echo esc_html(strtoupper($statusLabel)); ?></span>
+                <span title="<?php echo esc_attr($statusLabel); ?>" data-wc26-tooltip="<?php echo esc_attr($statusLabel); ?>"><?php echo esc_html(strtoupper($statusLabel)); ?></span>
                 <?php if ($elapsed > 0 && !in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
+                    <strong title="<?php echo esc_attr__('Minuto de juego', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Minuto de juego', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
                 <?php elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
+                    <strong title="<?php echo esc_attr__('Hora del partido', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Hora del partido', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
                 <?php endif; ?>
             </div>
 
             <div class="wc26-match__scoreboard">
                 <?php echo $this->renderScoreTeam($match['homeTeam'], $match['homeLogo'], 'home'); ?>
-                <strong class="wc26-match__score"><?php echo esc_html($score); ?></strong>
+                <strong class="wc26-match__score" title="<?php echo esc_attr__('Resultado', WC26_WIDGET_TEXT_DOMAIN); ?>" data-wc26-tooltip="<?php echo esc_attr__('Resultado', WC26_WIDGET_TEXT_DOMAIN); ?>"><?php echo esc_html($score); ?></strong>
                 <?php echo $this->renderScoreTeam($match['awayTeam'], $match['awayLogo'], 'away'); ?>
             </div>
 
             <?php if ($match['stage'] !== '' || $match['stadium'] !== '') : ?>
                 <div class="wc26-match__meta">
-                    <?php echo esc_html(implode(' - ', array_filter([$match['stage'], $match['stadium']]))); ?>
+                    <?php if ($match['stage'] !== '') : ?>
+                        <span title="<?php echo esc_attr($match['stage']); ?>" data-wc26-tooltip="<?php echo esc_attr($match['stage']); ?>"><?php echo esc_html($match['stage']); ?></span>
+                    <?php endif; ?>
+                    <?php if ($match['stadium'] !== '') : ?>
+                        <span title="<?php echo esc_attr($match['stadium']); ?>" data-wc26-tooltip="<?php echo esc_attr($match['stadium']); ?>"><?php echo esc_html($match['stadium']); ?></span>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </article>
@@ -582,7 +705,7 @@ final class Shortcode
 
         ob_start();
         ?>
-        <div class="wc26-match__team wc26-match__team--<?php echo esc_attr($side); ?>" title="<?php echo esc_attr($name); ?>">
+        <div class="wc26-match__team wc26-match__team--<?php echo esc_attr($side); ?>" title="<?php echo esc_attr($name); ?>" data-wc26-tooltip="<?php echo esc_attr($name); ?>">
             <span><?php echo esc_html($code); ?></span>
             <?php if ($logo !== '') : ?>
                 <img src="<?php echo esc_url($logo); ?>" alt="" loading="lazy" />
@@ -659,5 +782,20 @@ final class Shortcode
         }
 
         return date_i18n(get_option('time_format'), $timestamp);
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     */
+    private function matchTooltip(array $match): string
+    {
+        $parts = [
+            (string) $match['homeTeam'] . ' vs ' . (string) $match['awayTeam'],
+            $this->formatFixtureTime((string) $match['date']),
+            (string) $match['stage'],
+            (string) $match['stadium'],
+        ];
+
+        return implode(' - ', array_filter($parts));
     }
 }

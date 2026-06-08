@@ -12,7 +12,7 @@
 - Shortcodes heredados/deshabilitados para widgets oficiales: `world_cup_2026_page`, `world_cup_2026_league`, `world_cup_2026_standings`, `world_cup_2026_game`, `world_cup_2026_player`, `world_cup_2026_team`.
 - Opciones: `wc26_widget_settings`
 - Integraciones: endpoint API-Football v3 `/fixtures`.
-- Scripts externos: ninguno para el shortcode propio de cards.
+- Scripts externos: ninguno para el shortcode propio de cards; puede usar JS local en `assets/js/public.js`.
 - Dependencias: WordPress Plugin API. Sin Composer.
 
 ## Criterios de desarrollo
@@ -42,7 +42,9 @@ La pantalla admin usa tabs:
 - `Backend`: API key, league, season, logs y herramientas de simulacion.
 - `Front end`: visibilidad del shortcode y cantidad de partidos por linea.
 
-El cliente propio consulta `https://v3.football.api-sports.io/fixtures` con `league`, `season` y `date`, usando el header `x-apisports-key`.
+El cliente propio consulta `https://v3.football.api-sports.io/fixtures` con `league` y `season`, usando el header `x-apisports-key`. La llamada de temporada completa popula los resultados del shortcode y el frontend navega dias localmente sin nuevas llamadas.
+
+`fixturesByDate()` se conserva por compatibilidad, pero el shortcode principal debe preferir `fixturesForSeason()` para poder navegar partidos anteriores y siguientes desde memoria/render inicial.
 
 La temporada admite datos historicos desde 1930 para poder probar planes Free con `season=2022`.
 
@@ -63,7 +65,7 @@ Los shortcodes de widgets oficiales permanecen registrados, pero responden con u
 
 ## Render Propio
 
-El shortcode propio renderiza solo las cards de partidos del dia, sin cabecera, cache visible ni URL de debug. Cada fixture de API-Football se normaliza internamente a:
+El shortcode propio renderiza cards por dia dentro de un carrusel local, sin cache visible ni URL de debug. Cada fixture de API-Football se normaliza internamente a:
 
 - `id`
 - `date`
@@ -82,6 +84,12 @@ El shortcode propio renderiza solo las cards de partidos del dia, sin cabecera, 
 La grilla de cards usa CSS Grid y una variable CSS `--wc26-matches-per-line`. Debe poder mostrar 4 partidos en una linea en desktop, con UI compacta para que entren los 4 partidos y sus 8 logos/banderas. En mobile debe priorizar legibilidad y puede caer a 1 columna.
 
 No debe haber logica especial de "current partido" que agrande o destaque una card rompiendo la grilla. Los estados en vivo pueden tener color/borde, pero no cambiar el ancho.
+
+La navegacion por dias debe funcionar como carrusel con botones anterior/siguiente. La API no debe llamarse al avanzar o retroceder dias; todo debe salir de los fixtures ya renderizados.
+
+La meta de cada card debe mostrar ronda/partido y estadio en dos lineas separadas, no concatenadas en una sola linea.
+
+Los elementos visibles e interactivos del shortcode deben tener tooltips: botones del carrusel, dia visible, card, estado, hora/minuto, score, equipos, ronda y estadio.
 
 La visibilidad publica se controla con el setting `frontend_visible`. Si esta apagado, `[world_cup_2026_matches]` devuelve string vacio.
 
@@ -130,6 +138,8 @@ Nota: los widgets oficiales estan deshabilitados en esta build; se conserva el c
 
 - 60 segundos si algun partido esta en vivo (`1H`, `HT`, `2H`, `ET`, `BT`, `P`, `SUSP`, `INT`, `LIVE`).
 - 15 minutos si no hay partidos en vivo.
+
+`ApiFootballClient::fixturesForSeason()` usa la misma politica de cache para la temporada completa.
 
 La key se envia en header `x-apisports-key`, nunca en query string.
 

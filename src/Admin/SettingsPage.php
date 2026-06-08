@@ -299,7 +299,7 @@ final class SettingsPage
                 <?php else : ?>
                     <p>
                         <strong><?php echo esc_html__('Current API request:', WC26_WIDGET_TEXT_DOMAIN); ?></strong>
-                        <code><?php echo esc_html((new ApiFootballClient($this->settings))->fixturesUrl($this->settings->shortcodeDate())); ?></code>
+                        <code><?php echo esc_html((new ApiFootballClient($this->settings))->fixturesSeasonUrl()); ?></code>
                     </p>
                     <p class="description"><?php echo esc_html__('This request is executed by PHP with wp_remote_get and the API key in the x-apisports-key header.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
                 <?php endif; ?>
@@ -363,6 +363,7 @@ final class SettingsPage
         $season = isset($settings['season']) ? max(Settings::MIN_SEASON, absint($settings['season'])) : Settings::DEFAULT_SEASON;
 
         delete_transient(ApiFootballClient::cacheKeyFor($leagueId, $season, $date));
+        delete_transient(ApiFootballClient::seasonCacheKeyFor($leagueId, $season));
     }
 
     private function activeTab(): string
