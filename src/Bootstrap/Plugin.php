@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HernanCardoso\WorldCup2026Widget\Bootstrap;
 
 use HernanCardoso\WorldCup2026Widget\Api\FixturesEndpoint;
+use HernanCardoso\WorldCup2026Widget\Api\FixturesSyncService;
 use HernanCardoso\WorldCup2026Widget\Admin\SettingsPage;
 use HernanCardoso\WorldCup2026Widget\Frontend\Shortcode;
 use HernanCardoso\WorldCup2026Widget\Support\Settings;
@@ -27,5 +28,6 @@ final class Plugin
 
         (new Shortcode($settings))->registerHooks();
         (new FixturesEndpoint($settings))->registerHooks();
+        (new FixturesSyncService($settings))->registerHooks();
     }
 }

@@ -14,12 +14,12 @@ final class FixturesEndpoint
     public const ROUTE = '/fixtures';
 
     private Settings $settings;
-    private ApiFootballClient $api;
+    private FixturesSyncService $sync;
 
     public function __construct(Settings $settings)
     {
         $this->settings = $settings;
-        $this->api = new ApiFootballClient($settings);
+        $this->sync = new FixturesSyncService($settings);
     }
 
     public function registerHooks(): void
@@ -49,7 +49,7 @@ final class FixturesEndpoint
             ];
         }
 
-        $data = $this->api->fixturesForSeason();
+        $data = $this->sync->fixtures();
 
         if ($data instanceof WP_Error) {
             return $data;
@@ -65,6 +65,9 @@ final class FixturesEndpoint
             'fixtures' => $fixtures,
             'fixtures_by_date' => $this->groupFixturesByDate($fixtures),
             'fetched_at' => isset($data['fetched_at']) ? absint($data['fetched_at']) : time(),
+            'expires_at' => isset($data['expires_at']) ? absint($data['expires_at']) : 0,
+            'cache_hit' => !empty($data['cache_hit']),
+            'stale' => !empty($data['stale']),
         ];
     }
 

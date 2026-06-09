@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HernanCardoso\WorldCup2026Widget\Admin;
 
 use HernanCardoso\WorldCup2026Widget\Api\ApiFootballClient;
+use HernanCardoso\WorldCup2026Widget\Api\FixturesRepository;
 use HernanCardoso\WorldCup2026Widget\Support\Logger;
 use HernanCardoso\WorldCup2026Widget\Support\Settings;
 
@@ -364,6 +365,8 @@ final class SettingsPage
 
         delete_transient(ApiFootballClient::cacheKeyFor($leagueId, $season, $date));
         delete_transient(ApiFootballClient::seasonCacheKeyFor($leagueId, $season));
+        delete_option(FixturesRepository::optionNameFor($leagueId, $season));
+        delete_transient(FixturesRepository::lockNameFor($leagueId, $season));
     }
 
     private function activeTab(): string

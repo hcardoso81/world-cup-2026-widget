@@ -54,6 +54,26 @@ El plugin expone un endpoint tipo fetch en:
 
 El endpoint debe respetar los settings actuales: si `simulation_mock_enabled` esta activo junto con `simulation_enabled`, responde datos mock; si no, responde datos reales desde API-Football usando PHP como proxy server-side. Nunca exponer la API key al navegador.
 
+## Cache y Sincronizacion
+
+La estrategia principal de datos debe ser server-side:
+
+- `ApiFootballClient`: sabe como pedir datos a API-Football o mock.
+- `FixturesRepository`: guarda/lee fixtures en `wp_options`, con autoload desactivado.
+- `FixturesSyncService`: decide cuando refrescar, aplica lock anti rafagas y conserva stale data si la API falla.
+- `FixturesEndpoint`: responde al frontend desde la capa de sync/cache.
+
+El frontend nunca debe llamar API-Football directo. Siempre llama `/wp-json/wc26/v1/fixtures`.
+
+La cache persistente vive en opciones por `league_id` y `season`, con nombres `wc26_fixtures_cache_{league}_{season}`. Los locks de sync usan transients cortos `wc26_fixtures_sync_lock_{league}_{season}`.
+
+El cron `wc26_widget_sync_fixtures` corre con schedule `wc26_every_minute`, pero solo debe llamar la API si la cache esta vencida. TTL:
+
+- 60 segundos si hay partidos en vivo.
+- 15 minutos si no hay partidos en vivo.
+
+Si la API falla y existe cache previa, se debe devolver stale data antes que romper el frontend. Guardar ultimos errores en la opcion de cache.
+
 La temporada admite datos historicos desde 1930 para poder probar planes Free con `season=2022`.
 
 ## Shortcodes

@@ -6,6 +6,7 @@ namespace HernanCardoso\WorldCup2026Widget\Frontend;
 
 use HernanCardoso\WorldCup2026Widget\Api\ApiFootballClient;
 use HernanCardoso\WorldCup2026Widget\Api\FixturesEndpoint;
+use HernanCardoso\WorldCup2026Widget\Api\FixturesSyncService;
 use HernanCardoso\WorldCup2026Widget\Support\Settings;
 use WP_Error;
 
@@ -13,6 +14,7 @@ final class Shortcode
 {
     private Settings $settings;
     private ApiFootballClient $api;
+    private FixturesSyncService $sync;
     private bool $stylesEnqueued = false;
     private bool $publicScriptEnqueued = false;
     private bool $widgetScriptEnqueued = false;
@@ -22,6 +24,7 @@ final class Shortcode
     {
         $this->settings = $settings;
         $this->api = new ApiFootballClient($settings);
+        $this->sync = new FixturesSyncService($settings);
     }
 
     public function registerHooks(): void
@@ -229,7 +232,7 @@ final class Shortcode
         $date = $this->settings->isSimulationEnabled()
             ? $this->settings->sanitizeDate((string) $atts['date'])
             : $this->settings->currentArgentinaDate();
-        $data = $this->api->fixturesForSeason();
+        $data = $this->sync->fixtures();
 
         if ($data instanceof WP_Error) {
             return $this->renderError($data);
