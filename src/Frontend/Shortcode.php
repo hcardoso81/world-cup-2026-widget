@@ -657,12 +657,12 @@ final class Shortcode
         return [
             'id' => isset($fixtureData['id']) ? absint($fixtureData['id']) : 0,
             'date' => isset($fixtureData['date']) ? (string) $fixtureData['date'] : '',
-            'stage' => isset($league['round']) ? (string) $league['round'] : '',
-            'stadium' => isset($venue['name']) ? (string) $venue['name'] : '',
-            'homeTeam' => isset($home['name']) ? (string) $home['name'] : __('Team TBD', WC26_WIDGET_TEXT_DOMAIN),
+            'stage' => isset($league['round']) ? $this->localizeStage((string) $league['round']) : '',
+            'stadium' => isset($venue['name']) ? $this->localizeVenue((string) $venue['name']) : '',
+            'homeTeam' => isset($home['name']) ? $this->localizeTeamName((string) $home['name']) : __('Equipo por definir', WC26_WIDGET_TEXT_DOMAIN),
             'homeLogo' => isset($home['logo']) ? (string) $home['logo'] : '',
             'homeScore' => $this->nullableInt($goals['home'] ?? null),
-            'awayTeam' => isset($away['name']) ? (string) $away['name'] : __('Team TBD', WC26_WIDGET_TEXT_DOMAIN),
+            'awayTeam' => isset($away['name']) ? $this->localizeTeamName((string) $away['name']) : __('Equipo por definir', WC26_WIDGET_TEXT_DOMAIN),
             'awayLogo' => isset($away['logo']) ? (string) $away['logo'] : '',
             'awayScore' => $this->nullableInt($goals['away'] ?? null),
             'status' => $statusShort,
@@ -733,6 +733,64 @@ final class Shortcode
 
     private function teamCode(string $name): string
     {
+        $knownCodes = [
+            'alemania' => 'ALE',
+            'arabia saudita' => 'KSA',
+            'argelia' => 'ARG',
+            'argentina' => 'ARG',
+            'australia' => 'AUS',
+            'austria' => 'AUT',
+            'belgica' => 'BEL',
+            'brasil' => 'BRA',
+            'camerun' => 'CAM',
+            'canada' => 'CAN',
+            'chile' => 'CHI',
+            'colombia' => 'COL',
+            'corea del sur' => 'COR',
+            'costa rica' => 'CRC',
+            'croacia' => 'CRO',
+            'dinamarca' => 'DIN',
+            'ecuador' => 'ECU',
+            'egipto' => 'EGI',
+            'escocia' => 'ESC',
+            'espana' => 'ESP',
+            'estados unidos' => 'USA',
+            'francia' => 'FRA',
+            'gales' => 'GAL',
+            'ghana' => 'GHA',
+            'grecia' => 'GRE',
+            'inglaterra' => 'ING',
+            'iran' => 'IRN',
+            'irlanda' => 'IRL',
+            'italia' => 'ITA',
+            'japon' => 'JPN',
+            'marruecos' => 'MAR',
+            'mexico' => 'MEX',
+            'nigeria' => 'NGA',
+            'noruega' => 'NOR',
+            'nueva zelanda' => 'NZL',
+            'paises bajos' => 'PBA',
+            'paraguay' => 'PAR',
+            'peru' => 'PER',
+            'polonia' => 'POL',
+            'portugal' => 'POR',
+            'qatar' => 'QAT',
+            'senegal' => 'SEN',
+            'serbia' => 'SRB',
+            'sudafrica' => 'RSA',
+            'suecia' => 'SUE',
+            'suiza' => 'SUI',
+            'tunez' => 'TUN',
+            'turquia' => 'TUR',
+            'ucrania' => 'UCR',
+            'uruguay' => 'URU',
+        ];
+        $key = $this->normalizeLookupKey($name);
+
+        if (isset($knownCodes[$key])) {
+            return $knownCodes[$key];
+        }
+
         $normalized = trim(preg_replace('/[^A-Za-z0-9 ]/', '', $name) ?: $name);
         $words = preg_split('/\s+/', $normalized) ?: [];
 
@@ -751,6 +809,105 @@ final class Shortcode
         }
 
         return strtoupper(substr($normalized, 0, 3));
+    }
+
+    private function localizeTeamName(string $name): string
+    {
+        $teams = [
+            'Algeria' => 'Argelia',
+            'Argentina' => 'Argentina',
+            'Australia' => 'Australia',
+            'Austria' => 'Austria',
+            'Belgium' => 'Belgica',
+            'Brazil' => 'Brasil',
+            'Cameroon' => 'Camerun',
+            'Canada' => 'Canada',
+            'Chile' => 'Chile',
+            'Colombia' => 'Colombia',
+            'Costa Rica' => 'Costa Rica',
+            'Croatia' => 'Croacia',
+            'Denmark' => 'Dinamarca',
+            'Ecuador' => 'Ecuador',
+            'Egypt' => 'Egipto',
+            'England' => 'Inglaterra',
+            'France' => 'Francia',
+            'Germany' => 'Alemania',
+            'Ghana' => 'Ghana',
+            'Greece' => 'Grecia',
+            'Iran' => 'Iran',
+            'Ireland' => 'Irlanda',
+            'Italy' => 'Italia',
+            'Japan' => 'Japon',
+            'Korea Republic' => 'Corea del Sur',
+            'Mexico' => 'Mexico',
+            'Morocco' => 'Marruecos',
+            'Netherlands' => 'Paises Bajos',
+            'New Zealand' => 'Nueva Zelanda',
+            'Nigeria' => 'Nigeria',
+            'Norway' => 'Noruega',
+            'Paraguay' => 'Paraguay',
+            'Peru' => 'Peru',
+            'Poland' => 'Polonia',
+            'Portugal' => 'Portugal',
+            'Qatar' => 'Qatar',
+            'Saudi Arabia' => 'Arabia Saudita',
+            'Scotland' => 'Escocia',
+            'Senegal' => 'Senegal',
+            'Serbia' => 'Serbia',
+            'South Africa' => 'Sudafrica',
+            'Spain' => 'Espana',
+            'Sweden' => 'Suecia',
+            'Switzerland' => 'Suiza',
+            'Tunisia' => 'Tunez',
+            'Turkey' => 'Turquia',
+            'Ukraine' => 'Ucrania',
+            'United States' => 'Estados Unidos',
+            'Uruguay' => 'Uruguay',
+            'Wales' => 'Gales',
+        ];
+
+        return $teams[$name] ?? $name;
+    }
+
+    private function localizeStage(string $stage): string
+    {
+        if (preg_match('/^Group Stage\s*-\s*(\d+)$/', $stage, $matches) === 1) {
+            return sprintf('Fase de grupos - Fecha %d', absint($matches[1]));
+        }
+
+        $replacements = [
+            'Group Stage' => 'Fase de grupos',
+            'Matchday' => 'Fecha',
+            'Round of 16' => 'Octavos de final',
+            'Quarter-finals' => 'Cuartos de final',
+            'Semi-finals' => 'Semifinales',
+            '3rd Place Final' => 'Tercer puesto',
+            'Final' => 'Final',
+        ];
+
+        return trim(str_replace(array_keys($replacements), array_values($replacements), $stage));
+    }
+
+    private function localizeVenue(string $venue): string
+    {
+        if (preg_match('/^Stadium\s+(.+)$/', $venue, $matches) === 1) {
+            return 'Estadio ' . trim((string) $matches[1]);
+        }
+
+        if (preg_match('/^(.+)\s+Stadium$/', $venue, $matches) === 1) {
+            return 'Estadio ' . trim((string) $matches[1]);
+        }
+
+        return str_replace(' Stadium', ' Estadio', $venue);
+    }
+
+    private function normalizeLookupKey(string $value): string
+    {
+        $value = strtolower($value);
+        $from = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'];
+        $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
+
+        return trim(str_replace($from, $to, $value));
     }
 
     private function statusLabel(string $status): string

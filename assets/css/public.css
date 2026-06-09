@@ -120,13 +120,21 @@ body .modal-widget-content {
 }
 
 .wc26-matches__nav:hover,
-.wc26-matches__nav:focus {
+.wc26-matches__nav:focus-visible {
+    background: color-mix(in srgb, var(--wc26-main) 12%, transparent);
+    border-color: var(--wc26-main);
     color: inherit;
 }
 
 .wc26-matches__nav:disabled {
     cursor: default;
-    opacity: 0.42;
+    opacity: 0.68;
+}
+
+.wc26-matches__nav:disabled:hover,
+.wc26-matches__nav:disabled:focus-visible {
+    background: transparent;
+    border-color: currentColor;
 }
 
 .wc26-matches__date {
