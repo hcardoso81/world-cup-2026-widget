@@ -11,6 +11,7 @@ use WP_Error;
 final class FixturesSyncService
 {
     public const CRON_HOOK = 'wc26_widget_sync_fixtures';
+    private const CRON_SCHEDULE = 'wc26_fixed_refresh_interval';
 
     private Settings $settings;
     private ApiFootballClient $api;
@@ -36,9 +37,13 @@ final class FixturesSyncService
      */
     public function addCronSchedules(array $schedules): array
     {
-        $schedules['wc26_every_minute'] = [
-            'interval' => MINUTE_IN_SECONDS,
-            'display' => __('Every minute', WC26_WIDGET_TEXT_DOMAIN),
+        $schedules[self::CRON_SCHEDULE] = [
+            'interval' => SyncPolicy::refreshInterval(),
+            'display' => sprintf(
+                /* translators: %d: maximum theoretical requests per day. */
+                __('Every minute (%d requests/day max)', WC26_WIDGET_TEXT_DOMAIN),
+                SyncPolicy::requestsPerDayAtRefreshInterval()
+            ),
         ];
 
         return $schedules;
@@ -46,8 +51,14 @@ final class FixturesSyncService
 
     public function scheduleCron(): void
     {
+        $currentSchedule = wp_get_schedule(self::CRON_HOOK);
+
+        if ($currentSchedule !== false && $currentSchedule !== self::CRON_SCHEDULE) {
+            wp_clear_scheduled_hook(self::CRON_HOOK);
+        }
+
         if (!wp_next_scheduled(self::CRON_HOOK)) {
-            wp_schedule_event(time() + MINUTE_IN_SECONDS, 'wc26_every_minute', self::CRON_HOOK);
+            wp_schedule_event(time() + SyncPolicy::refreshInterval(), self::CRON_SCHEDULE, self::CRON_HOOK);
         }
     }
 

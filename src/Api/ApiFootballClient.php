@@ -101,7 +101,7 @@ final class ApiFootballClient
             'date' => $date,
             'fixtures' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
+            'cache_ttl' => SyncPolicy::refreshInterval(),
         ];
 
         set_transient($cacheKey, $data, (int) $data['cache_ttl']);
@@ -178,7 +178,7 @@ final class ApiFootballClient
         $data = [
             'fixtures' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
+            'cache_ttl' => SyncPolicy::refreshInterval(),
         ];
 
         return $data;
@@ -275,7 +275,7 @@ final class ApiFootballClient
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
+            'cache_ttl' => SyncPolicy::refreshInterval(),
             'mock' => true,
         ];
     }
@@ -313,7 +313,7 @@ final class ApiFootballClient
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
+            'cache_ttl' => SyncPolicy::refreshInterval(),
             'mock' => true,
         ];
     }

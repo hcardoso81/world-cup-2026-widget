@@ -8,8 +8,6 @@ use HernanCardoso\WorldCup2026Widget\Support\Settings;
 
 final class FixturesRepository
 {
-    private const LOCK_TTL = 55;
-
     private Settings $settings;
 
     public function __construct(Settings $settings)
@@ -41,7 +39,7 @@ final class FixturesRepository
      */
     public function save(array $data): array
     {
-        $ttl = isset($data['cache_ttl']) ? max(60, absint($data['cache_ttl'])) : 15 * MINUTE_IN_SECONDS;
+        $ttl = SyncPolicy::refreshInterval();
         $stored = [
             'fixtures' => isset($data['fixtures']) && is_array($data['fixtures']) ? $data['fixtures'] : [],
             'fetched_at' => isset($data['fetched_at']) ? absint($data['fetched_at']) : time(),
@@ -93,7 +91,7 @@ final class FixturesRepository
             return false;
         }
 
-        set_transient($this->lockName(), time(), self::LOCK_TTL);
+        set_transient($this->lockName(), time(), SyncPolicy::refreshInterval());
 
         return true;
     }
