@@ -46,8 +46,7 @@ final class FixturesRepository
             'expires_at' => time() + $ttl,
             'cache_ttl' => $ttl,
             'scope' => isset($data['scope']) ? sanitize_key((string) $data['scope']) : 'season',
-            'source' => !empty($data['mock']) ? 'mock' : 'api-football',
-            'mock' => !empty($data['mock']),
+            'source' => 'api-football',
             'errors' => [],
         ];
 
@@ -71,7 +70,6 @@ final class FixturesRepository
                 'cache_ttl' => 0,
                 'scope' => 'season',
                 'source' => 'none',
-                'mock' => false,
             ];
         }
 

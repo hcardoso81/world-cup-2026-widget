@@ -192,19 +192,6 @@ final class SettingsPage
                         <span><?php echo esc_html__('Habilitar simulacion', WC26_WIDGET_TEXT_DOMAIN); ?></span>
                     </label>
                     <div class="wc26-simulation-date">
-                        <input type="hidden" name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[simulation_mock_enabled]" value="0" />
-                        <label class="wc26-admin-check" for="wc26_widget_simulation_mock_enabled">
-                            <input
-                                id="wc26_widget_simulation_mock_enabled"
-                                type="checkbox"
-                                name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[simulation_mock_enabled]"
-                                value="1"
-                                <?php checked(!empty($settings['simulation_mock_enabled'])); ?>
-                            />
-                            <span><?php echo esc_html__('Usar mockup con datos hardcodeados', WC26_WIDGET_TEXT_DOMAIN); ?></span>
-                        </label>
-                        <p class="description"><?php echo esc_html__('Cuando esta opcion esta activa, el shortcode usa fixtures de prueba de la Copa y no llama a API-Football.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
-
                         <label for="wc26_widget_match_date"><?php echo esc_html__('Current day simulado', WC26_WIDGET_TEXT_DOMAIN); ?></label>
                         <input
                             id="wc26_widget_match_date"
@@ -213,7 +200,15 @@ final class SettingsPage
                             name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[match_date]"
                             value="<?php echo esc_attr((string) $settings['match_date']); ?>"
                         />
-                        <p class="description"><?php echo esc_html__('Solo se usa cuando la simulacion esta habilitada. Para el mockup hardcodeado, usa una fecha entre 2026-06-08 y 2026-06-13. Con simulacion apagada, el shortcode usa la fecha actual de Argentina.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
+                        <label for="wc26_widget_match_time"><?php echo esc_html__('Current time simulado', WC26_WIDGET_TEXT_DOMAIN); ?></label>
+                        <input
+                            id="wc26_widget_match_time"
+                            class="regular-text"
+                            type="time"
+                            name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[match_time]"
+                            value="<?php echo esc_attr((string) $settings['match_time']); ?>"
+                        />
+                        <p class="description"><?php echo esc_html__('Solo se usa cuando la simulacion esta habilitada. Si la fecha y hora simuladas caen dentro de la franja de un partido, la card se marca como partido actual.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
                     </div>
                 </div>
             </details>
@@ -269,7 +264,7 @@ final class SettingsPage
         ?>
         <section class="wc26-admin-panel">
             <h2><?php echo esc_html__('Ready-to-use shortcode', WC26_WIDGET_TEXT_DOMAIN); ?></h2>
-            <?php if ($this->settings->apiKey() === '' && !$this->settings->shouldUseMockFixtures()) : ?>
+            <?php if ($this->settings->apiKey() === '') : ?>
                 <p><?php echo esc_html__('Save your API-Football key to generate the copy/paste shortcode.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php else : ?>
                 <p><?php echo esc_html__('Copy this shortcode and paste it into any page, post, widget area or block that supports shortcodes.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
@@ -291,19 +286,11 @@ final class SettingsPage
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-                <?php if ($this->settings->shouldUseMockFixtures()) : ?>
-                    <p>
-                        <strong><?php echo esc_html__('Current data source:', WC26_WIDGET_TEXT_DOMAIN); ?></strong>
-                        <code><?php echo esc_html__('Mockup hardcodeado', WC26_WIDGET_TEXT_DOMAIN); ?></code>
-                    </p>
-                    <p class="description"><?php echo esc_html__('No API-Football request is executed while simulation mockup is enabled.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
-                <?php else : ?>
-                    <p>
-                        <strong><?php echo esc_html__('Current API request:', WC26_WIDGET_TEXT_DOMAIN); ?></strong>
-                        <code><?php echo esc_html((new ApiFootballClient($this->settings))->fixturesSeasonUrl()); ?></code>
-                    </p>
-                    <p class="description"><?php echo esc_html__('This single season request is executed server-side by PHP at most once per minute, then cached for the shortcode and REST endpoint. The API key is sent only in the x-apisports-key header.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
-                <?php endif; ?>
+                <p>
+                    <strong><?php echo esc_html__('Current API request:', WC26_WIDGET_TEXT_DOMAIN); ?></strong>
+                    <code><?php echo esc_html((new ApiFootballClient($this->settings))->fixturesSeasonUrl()); ?></code>
+                </p>
+                <p class="description"><?php echo esc_html__('This single season request is executed server-side by PHP at most once per minute, then cached for the shortcode and REST endpoint. The API key is sent only in the x-apisports-key header.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php endif; ?>
         </section>
         <?php

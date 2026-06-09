@@ -245,6 +245,7 @@ final class Shortcode
         $dates = array_keys($fixturesByDate);
         $activeDate = $this->activeCarouselDate($dates, $date);
         $carouselId = $this->nextId('wc26-matches-carousel');
+        $currentTimestamp = $this->settings->currentTimestamp();
 
         ob_start();
         ?>
@@ -263,7 +264,7 @@ final class Shortcode
                                 <div class="wc26-matches__day" data-wc26-day="<?php echo esc_attr($fixtureDate); ?>" data-wc26-label="<?php echo esc_attr($this->formatDate($fixtureDate)); ?>" <?php echo $fixtureDate === $activeDate ? '' : 'hidden'; ?>>
                                     <div class="wc26-matches__list">
                                         <?php foreach ($dayFixtures as $fixture) : ?>
-                                            <?php echo $this->renderFixture($fixture); ?>
+                                            <?php echo $this->renderFixture($fixture, $currentTimestamp); ?>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -576,19 +577,27 @@ final class Shortcode
     /**
      * @param array<string, mixed> $fixture
      */
-    private function renderFixture(array $fixture): string
+    private function renderFixture(array $fixture, int $currentTimestamp): string
     {
-        $match = $this->fixtureModel($fixture);
+        $match = $this->fixtureModel($fixture, $currentTimestamp);
         $statusShort = $match['status'];
-        $statusLabel = $this->statusLabel($statusShort);
+        $statusLabel = $match['isCurrent'] ? __('En juego', WC26_WIDGET_TEXT_DOMAIN) : $this->statusLabel($statusShort);
         $elapsed = $match['elapsed'];
         $date = $match['date'];
-        $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true);
+        $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true) && !$match['isCurrent'];
         $score = $isNotStarted ? '-' : $this->formatScore($match);
+        $classes = [
+            'wc26-match',
+            'wc26-match--' . strtolower($statusShort),
+        ];
+
+        if ($match['isCurrent']) {
+            $classes[] = 'wc26-match--current';
+        }
 
         ob_start();
         ?>
-        <article class="wc26-match wc26-match--<?php echo esc_attr(strtolower($statusShort)); ?>" title="<?php echo esc_attr($this->matchTooltip($match)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
+        <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
                 <span><?php echo esc_html(strtoupper($statusLabel)); ?></span>
                 <?php if ($elapsed > 0 && !in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
@@ -637,10 +646,11 @@ final class Shortcode
      *     status:string,
      *     statusLabel:string,
      *     elapsed:int,
+     *     isCurrent:bool,
      *     penalties:array{home:int|null,away:int|null}
      * }
      */
-    private function fixtureModel(array $fixture): array
+    private function fixtureModel(array $fixture, int $currentTimestamp): array
     {
         $fixtureData = is_array($fixture['fixture'] ?? null) ? $fixture['fixture'] : [];
         $league = is_array($fixture['league'] ?? null) ? $fixture['league'] : [];
@@ -653,10 +663,18 @@ final class Shortcode
         $score = is_array($fixture['score'] ?? null) ? $fixture['score'] : [];
         $penalties = is_array($score['penalty'] ?? null) ? $score['penalty'] : [];
         $statusShort = (string) ($status['short'] ?? 'NS');
+        $date = isset($fixtureData['date']) ? (string) $fixtureData['date'] : '';
+        $kickoffTimestamp = $this->fixtureTimestamp($fixtureData, $date);
+        $isCurrent = $this->isCurrentMatch($statusShort, $kickoffTimestamp, $currentTimestamp);
+        $elapsed = isset($status['elapsed']) ? absint($status['elapsed']) : 0;
+
+        if ($isCurrent && $elapsed === 0 && $kickoffTimestamp > 0) {
+            $elapsed = max(1, (int) floor(($currentTimestamp - $kickoffTimestamp) / MINUTE_IN_SECONDS));
+        }
 
         return [
             'id' => isset($fixtureData['id']) ? absint($fixtureData['id']) : 0,
-            'date' => isset($fixtureData['date']) ? (string) $fixtureData['date'] : '',
+            'date' => $date,
             'stage' => isset($league['round']) ? $this->localizeStage((string) $league['round']) : '',
             'stadium' => isset($venue['name']) ? $this->localizeVenue((string) $venue['name']) : '',
             'homeTeam' => isset($home['name']) ? $this->localizeTeamName((string) $home['name']) : __('Equipo por definir', WC26_WIDGET_TEXT_DOMAIN),
@@ -667,7 +685,8 @@ final class Shortcode
             'awayScore' => $this->nullableInt($goals['away'] ?? null),
             'status' => $statusShort,
             'statusLabel' => isset($status['long']) ? (string) $status['long'] : $this->statusLabel($statusShort),
-            'elapsed' => isset($status['elapsed']) ? absint($status['elapsed']) : 0,
+            'elapsed' => $elapsed,
+            'isCurrent' => $isCurrent,
             'penalties' => [
                 'home' => $this->nullableInt($penalties['home'] ?? null),
                 'away' => $this->nullableInt($penalties['away'] ?? null),
@@ -700,6 +719,37 @@ final class Shortcode
         }
 
         return $homeScore . ' - ' . $awayScore;
+    }
+
+    /**
+     * @param array<string, mixed> $fixtureData
+     */
+    private function fixtureTimestamp(array $fixtureData, string $date): int
+    {
+        $timestamp = isset($fixtureData['timestamp']) ? absint($fixtureData['timestamp']) : 0;
+
+        if ($timestamp > 0) {
+            return $timestamp;
+        }
+
+        $parsed = strtotime($date);
+
+        return $parsed === false ? 0 : $parsed;
+    }
+
+    private function isCurrentMatch(string $statusShort, int $kickoffTimestamp, int $currentTimestamp): bool
+    {
+        if (in_array($statusShort, ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'], true)) {
+            return true;
+        }
+
+        if (in_array($statusShort, ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'], true) || $kickoffTimestamp <= 0) {
+            return false;
+        }
+
+        $matchWindowEnds = $kickoffTimestamp + (150 * MINUTE_IN_SECONDS);
+
+        return $currentTimestamp >= $kickoffTimestamp && $currentTimestamp <= $matchWindowEnds;
     }
 
     /**
@@ -903,11 +953,13 @@ final class Shortcode
 
     private function normalizeLookupKey(string $value): string
     {
-        $value = strtolower($value);
-        $from = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'];
-        $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
+        if (function_exists('remove_accents')) {
+            $value = remove_accents($value);
+        }
 
-        return trim(str_replace($from, $to, $value));
+        $value = strtolower($value);
+
+        return trim($value);
     }
 
     private function statusLabel(string $status): string
