@@ -63,6 +63,8 @@ La estrategia principal de datos debe ser server-side:
 - `FixturesSyncService`: decide cuando refrescar, aplica lock anti rafagas y conserva stale data si la API falla.
 - `FixturesEndpoint`: responde al frontend desde la capa de sync/cache.
 
+Para temporada completa, `ApiFootballClient::fixturesForSeason()` debe comportarse como transporte puro. No agregar cache interna ahi: la cache comun de mock y real vive en `FixturesSyncService` + `FixturesRepository`.
+
 El frontend nunca debe llamar API-Football directo. Siempre llama `/wp-json/wc26/v1/fixtures`.
 
 La cache persistente vive en opciones por `league_id` y `season`, con nombres `wc26_fixtures_cache_{league}_{season}`. Los locks de sync usan transients cortos `wc26_fixtures_sync_lock_{league}_{season}`.

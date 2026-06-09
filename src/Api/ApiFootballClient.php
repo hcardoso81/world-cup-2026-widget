@@ -119,13 +119,6 @@ final class ApiFootballClient
             return $this->mockFixturesForSeason();
         }
 
-        $cacheKey = $this->seasonCacheKey();
-        $cached = get_transient($cacheKey);
-
-        if (is_array($cached)) {
-            return $cached;
-        }
-
         if ($this->settings->apiKey() === '') {
             return new WP_Error(
                 'wc26_api_missing_key',
@@ -189,8 +182,6 @@ final class ApiFootballClient
             'cache_ttl' => $this->cacheTtl($fixtures),
         ];
 
-        set_transient($cacheKey, $data, (int) $data['cache_ttl']);
-
         return $data;
     }
 
@@ -240,14 +231,6 @@ final class ApiFootballClient
                 'timezone' => $this->timezone(),
             ],
             self::BASE_URL . '/fixtures'
-        );
-    }
-
-    private function seasonCacheKey(): string
-    {
-        return self::seasonCacheKeyFor(
-            $this->settings->leagueId(),
-            $this->settings->season()
         );
     }
 
