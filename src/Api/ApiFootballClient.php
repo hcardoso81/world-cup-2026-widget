@@ -11,7 +11,6 @@ use WP_Error;
 final class ApiFootballClient
 {
     private const BASE_URL = 'https://v3.football.api-sports.io';
-    private const LIVE_STATUSES = ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'];
 
     private Settings $settings;
 
@@ -102,7 +101,7 @@ final class ApiFootballClient
             'date' => $date,
             'fixtures' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => $this->cacheTtl($fixtures),
+            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
         ];
 
         set_transient($cacheKey, $data, (int) $data['cache_ttl']);
@@ -179,7 +178,7 @@ final class ApiFootballClient
         $data = [
             'fixtures' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => $this->cacheTtl($fixtures),
+            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
         ];
 
         return $data;
@@ -248,26 +247,6 @@ final class ApiFootballClient
     }
 
     /**
-     * @param array<int, mixed> $fixtures
-     */
-    private function cacheTtl(array $fixtures): int
-    {
-        foreach ($fixtures as $fixture) {
-            if (!is_array($fixture)) {
-                continue;
-            }
-
-            $short = (string) ($fixture['fixture']['status']['short'] ?? '');
-
-            if (in_array($short, self::LIVE_STATUSES, true)) {
-                return 60;
-            }
-        }
-
-        return 15 * MINUTE_IN_SECONDS;
-    }
-
-    /**
      * @return array<string, mixed>
      */
     private function mockFixturesByDate(string $date): array
@@ -296,7 +275,7 @@ final class ApiFootballClient
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => $this->cacheTtl($fixtures),
+            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
             'mock' => true,
         ];
     }
@@ -334,7 +313,7 @@ final class ApiFootballClient
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),
-            'cache_ttl' => $this->cacheTtl($fixtures),
+            'cache_ttl' => SyncPolicy::ttlForFixtures($fixtures),
             'mock' => true,
         ];
     }

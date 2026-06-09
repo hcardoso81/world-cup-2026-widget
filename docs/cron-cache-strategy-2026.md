@@ -87,8 +87,10 @@ Usar frecuencia media.
 
 Usar frecuencia alta, pero controlada.
 
-- Desde 15 minutos antes del primer partido hasta 90 minutos despues del ultimo partido: cada 60 segundos.
+- Desde 2 horas antes del primer partido hasta 3 horas despues del ultimo kickoff programado: cada 60 segundos.
 - Si API-Football informa algun estado live (`1H`, `HT`, `2H`, `ET`, `P`, `LIVE`, `SUSP`, `INT`), TTL de cache: 60 segundos.
+
+La ventana amplia evita quedar corto por demoras, alargues, penales, suspensiones por clima o carga tardia de datos. Ejemplo: si el primer partido empieza a las 16:00 ART y el ultimo empieza a la 01:00 ART, se refresca cada 60 segundos desde las 14:00 ART hasta las 04:00 ART.
 
 ### Despues del ultimo partido del dia
 
@@ -156,8 +158,9 @@ SyncPolicy::ttlForFixtures(array $fixtures, DateTimeImmutable $now): int
 La politica debe devolver:
 
 - `60` si hay live.
-- `300` si hay partido dentro de 90 minutos o terminado hace menos de 90 minutos.
-- `900` si es dia de partido pero fuera de ventana live.
+- `60` desde 2 horas antes del primer partido hasta 3 horas despues del ultimo kickoff.
+- `900` desde 6 horas antes del primer partido hasta la ventana de alta frecuencia.
+- `900` desde el final de la ventana de alta frecuencia hasta 6 horas despues del ultimo kickoff.
 - `21600` si no hay partido cercano.
 
-Esto reemplazaria el TTL fijo actual de `60 / 15 minutos` por uno mas tactico.
+Esto reemplaza el TTL fijo simple de `60 / 15 minutos` por uno mas tactico.

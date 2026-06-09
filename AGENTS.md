@@ -72,7 +72,9 @@ La cache persistente vive en opciones por `league_id` y `season`, con nombres `w
 El cron `wc26_widget_sync_fixtures` corre con schedule `wc26_every_minute`, pero solo debe llamar la API si la cache esta vencida. TTL:
 
 - 60 segundos si hay partidos en vivo.
-- 15 minutos si no hay partidos en vivo.
+- 60 segundos desde 2 horas antes del primer partido hasta 3 horas despues del ultimo kickoff programado del conjunto de fixtures.
+- 15 minutos desde 6 horas antes del primer partido hasta la ventana de alta frecuencia, y tambien durante 3 horas adicionales de cooldown.
+- 6 horas si no hay partido cercano.
 
 Si la API falla y existe cache previa, se debe devolver stale data antes que romper el frontend. Guardar ultimos errores en la opcion de cache.
 
