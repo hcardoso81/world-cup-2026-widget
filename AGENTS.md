@@ -52,29 +52,26 @@ El plugin expone un endpoint tipo fetch en:
 - Clase: `src/Api/FixturesEndpoint.php`
 - JS publico que lo consume: `assets/js/public.js`
 
-El endpoint debe respetar los settings actuales: si `simulation_mock_enabled` esta activo junto con `simulation_enabled`, responde datos mock; si no, responde datos reales desde API-Football usando PHP como proxy server-side. Nunca exponer la API key al navegador.
+El endpoint siempre responde datos reales desde API-Football usando PHP como proxy server-side y la cache compartida. Nunca exponer la API key al navegador.
 
 ## Cache y Sincronizacion
 
 La estrategia principal de datos debe ser server-side:
 
-- `ApiFootballClient`: sabe como pedir datos a API-Football o mock.
+- `ApiFootballClient`: sabe como pedir datos reales a API-Football.
 - `FixturesRepository`: guarda/lee fixtures en `wp_options`, con autoload desactivado.
 - `FixturesSyncService`: decide cuando refrescar, aplica lock anti rafagas y conserva stale data si la API falla.
 - `FixturesEndpoint`: responde al frontend desde la capa de sync/cache.
 
-Para temporada completa, `ApiFootballClient::fixturesForSeason()` debe comportarse como transporte puro. No agregar cache interna ahi: la cache comun de mock y real vive en `FixturesSyncService` + `FixturesRepository`.
+Para temporada completa, `ApiFootballClient::fixturesForSeason()` debe comportarse como transporte puro. No agregar cache interna ahi: la cache comun vive en `FixturesSyncService` + `FixturesRepository`.
 
 El frontend nunca debe llamar API-Football directo. Siempre llama `/wp-json/wc26/v1/fixtures`.
 
 La cache persistente vive en opciones por `league_id` y `season`, con nombres `wc26_fixtures_cache_{league}_{season}`. Los locks de sync usan transients cortos `wc26_fixtures_sync_lock_{league}_{season}`.
 
-El cron `wc26_widget_sync_fixtures` corre con schedule `wc26_every_minute`, pero solo debe llamar la API si la cache esta vencida. TTL:
+El cron `wc26_widget_sync_fixtures` corre con schedule `wc26_fixed_refresh_interval`, equivalente a 1 request por minuto. La cache, el lock y los transients compatibles deben usar la misma fuente de verdad: `SyncPolicy::refreshInterval()`, actualmente `MINUTE_IN_SECONDS`.
 
-- 60 segundos si hay partidos en vivo.
-- 60 segundos desde 2 horas antes del primer partido hasta 3 horas despues del ultimo kickoff programado del conjunto de fixtures.
-- 15 minutos desde 6 horas antes del primer partido hasta la ventana de alta frecuencia, y tambien durante 3 horas adicionales de cooldown.
-- 6 horas si no hay partido cercano.
+No volver a introducir umbrales dinamicos por partido en vivo, cercania al kickoff, cooldown, deltas ni ventanas de alta frecuencia. La regla operativa es simple: una consulta de temporada completa como maximo por minuto si la cache esta vencida.
 
 Si la API falla y existe cache previa, se debe devolver stale data antes que romper el frontend. Guardar ultimos errores en la opcion de cache.
 
@@ -111,11 +108,15 @@ El shortcode propio renderiza cards por dia dentro de un carrusel local, sin cac
 - `awayScore`
 - `status`
 - `statusLabel`
+- `elapsed`
+- `isCurrent`
 - `penalties`
 
 La grilla de cards usa CSS Grid y una variable CSS `--wc26-matches-per-line`. Debe poder mostrar 4 partidos en una linea en desktop, con UI compacta para que entren los 4 partidos y sus 8 logos/banderas. En mobile debe priorizar legibilidad y puede caer a 1 columna.
 
-No debe haber logica especial de "current partido" que agrande o destaque una card rompiendo la grilla. Los estados en vivo pueden tener color/borde, pero no cambiar el ancho.
+Puede haber logica de `current match`, pero solo para destacar visualmente sin cambiar el ancho ni romper la grilla. El destaque debe ser por clase CSS (`wc26-match--current`) y debe mantener dimensiones estables.
+
+Una card es current match si API-Football informa un estado live (`1H`, `HT`, `2H`, `ET`, `BT`, `P`, `SUSP`, `INT`, `LIVE`) o si, en modo simulacion, la fecha/hora simulada cae entre el kickoff y 150 minutos despues. Este modo de simulacion es solo para testing/demo visual y no debe modificar los datos crudos de API.
 
 La navegacion por dias debe funcionar como carrusel con botones anterior/siguiente. La API no debe llamarse al avanzar o retroceder dias; todo debe salir de los fixtures ya renderizados.
 
@@ -127,37 +128,31 @@ La meta de cada card debe mostrar ronda/partido y estadio en dos lineas separada
 
 Los tooltips deben existir en botones del carrusel, dia visible y card. La card debe tener un solo tooltip global con el detalle del partido; no agregar tooltips por palabras internas como resultado, estado, equipos, ronda o estadio.
 
+Las cards no deben usar atributo `title`, para evitar el tooltip nativo del navegador. Usar solo `data-wc26-tooltip` para el tooltip custom.
+
 El tooltip debe usar fondo main `--c-main: #604c8d` con texto blanco. Los tooltips de navegacion anterior/siguiente deben usar fuente significativamente mas chica que el tooltip de card.
 
 La fecha visible del carrusel debe usar color main y ser un poco mas grande que el texto meta de las cards.
 
-Los tooltips, fuentes y colores del shortcode deben heredar del theme tanto como sea posible; evitar colores hardcodeados en la UI publica.
+Los tooltips, fuentes y colores del shortcode deben heredar del theme tanto como sea posible; evitar colores hardcodeados en la UI publica. Se permiten fondos sutiles para cards y chips blancos detras de logos/banderas para que imagenes claras se distingan.
+
+La UI publica debe localizar textos comunes al espanol cuando la API los devuelve en ingles: nombres de selecciones frecuentes, rondas como `Group Stage`, `Matchday`, `Round of 16`, `Quarter-finals`, `Semi-finals`, y estadios con patron `Stadium`.
 
 La visibilidad publica se controla con el setting `frontend_visible`. Si esta apagado, `[world_cup_2026_matches]` devuelve string vacio.
 
-## Simulacion y Mockup
+## Simulacion
 
 La simulacion vive en el tab `Backend`, dentro de un desplegable llamado `Simulacion`.
 
 Opciones:
 
-- `simulation_enabled`: habilita el uso de un `current day` simulado.
+- `simulation_enabled`: habilita el uso de un `current day/time` simulado.
 - `match_date`: actua como `Current day simulado`; solo se usa cuando `simulation_enabled` esta activo.
-- `simulation_mock_enabled`: cuando esta activo junto con `simulation_enabled`, el shortcode usa datos hardcodeados y no llama a API-Football.
+- `match_time`: actua como `Current time simulado`; solo se usa cuando `simulation_enabled` esta activo.
 
 Con simulacion apagada, el shortcode siempre usa la fecha actual del sistema en zona horaria de Argentina (`America/Argentina/Buenos_Aires`).
 
-El mock hardcodeado debe:
-
-- Respetar la estructura cruda de API-Football (`fixture`, `league`, `teams`, `goals`, `score`).
-- Ordenar los partidos por fecha ascendente.
-- Cubrir desde `2026-06-08` hasta `2026-06-13`.
-- Simular 4 partidos por dia.
-- Usar paises y estadios variados.
-- Incluir estados mezclados por dia: finalizados, en vivo y pendientes.
-- Los partidos posteriores al `2026-06-10` deben estar no iniciados (`NS`) y sin goles.
-- Los partidos no iniciados deben mostrarse con marcador `-`, no `VS` ni `0 - 0`.
-- No depender de API key ni de transients previos cuando `simulation_mock_enabled` esta activo.
+No existe mock hardcodeado en esta build. No reintroducir `simulation_mock_enabled`, `api_key=mock`, datos fake ni ramas de transporte mock. La simulacion solo cambia la fecha/hora usada por el render para elegir dia activo y marcar `current match` sobre datos reales/cacheados.
 
 ## Widgets Oficiales
 
@@ -178,12 +173,9 @@ Nota: los widgets oficiales estan deshabilitados en esta build; se conserva el c
 
 ## Cliente API-Football
 
-`ApiFootballClient::fixturesByDate()` cachea con transients:
+`ApiFootballClient::fixturesByDate()` se conserva por compatibilidad y usa transients con `SyncPolicy::refreshInterval()`.
 
-- 60 segundos si algun partido esta en vivo (`1H`, `HT`, `2H`, `ET`, `BT`, `P`, `SUSP`, `INT`, `LIVE`).
-- 15 minutos si no hay partidos en vivo.
-
-`ApiFootballClient::fixturesForSeason()` usa la misma politica de cache para la temporada completa.
+`ApiFootballClient::fixturesForSeason()` es el camino principal del shortcode/cache/endpoint y no debe guardar cache interna. Debe consultar `/fixtures` con `league`, `season` y `timezone`, y devolver el payload normalizado para que `FixturesSyncService` lo persista.
 
 La key se envia en header `x-apisports-key`, nunca en query string.
 
@@ -214,6 +206,10 @@ php -l src/Bootstrap/Plugin.php
 php -l src/Support/Settings.php
 php -l src/Support/Logger.php
 php -l src/Api/ApiFootballClient.php
+php -l src/Api/FixturesEndpoint.php
+php -l src/Api/FixturesRepository.php
+php -l src/Api/FixturesSyncService.php
+php -l src/Api/SyncPolicy.php
 php -l src/Admin/SettingsPage.php
 php -l src/Frontend/Shortcode.php
 ```

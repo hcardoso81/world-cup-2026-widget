@@ -230,7 +230,13 @@ final class Settings
         $time = sanitize_text_field($time);
 
         if (preg_match('/^(\d{1,2}):(\d{2})$/', $time, $matches) !== 1) {
-            return self::DEFAULT_MATCH_TIME;
+            $parsed = strtotime('1970-01-01 ' . $time);
+
+            if ($parsed === false) {
+                return self::DEFAULT_MATCH_TIME;
+            }
+
+            return date('H:i', $parsed);
         }
 
         $hour = absint($matches[1]);

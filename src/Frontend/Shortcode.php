@@ -245,7 +245,7 @@ final class Shortcode
         $dates = array_keys($fixturesByDate);
         $activeDate = $this->activeCarouselDate($dates, $date);
         $carouselId = $this->nextId('wc26-matches-carousel');
-        $currentTimestamp = $this->settings->currentTimestamp();
+        $currentTimestamp = $this->currentMatchTimestamp();
 
         ob_start();
         ?>
@@ -665,11 +665,15 @@ final class Shortcode
         $statusShort = (string) ($status['short'] ?? 'NS');
         $date = isset($fixtureData['date']) ? (string) $fixtureData['date'] : '';
         $kickoffTimestamp = $this->fixtureTimestamp($fixtureData, $date);
-        $isCurrent = $this->isCurrentMatch($statusShort, $kickoffTimestamp, $currentTimestamp);
+        $isCurrent = $this->settings->isSimulationEnabled()
+            ? $this->isCurrentSimulatedMatch($statusShort, $date)
+            : $this->isCurrentMatch($statusShort, $kickoffTimestamp, $currentTimestamp);
         $elapsed = isset($status['elapsed']) ? absint($status['elapsed']) : 0;
 
-        if ($isCurrent && $elapsed === 0 && $kickoffTimestamp > 0) {
-            $elapsed = max(1, (int) floor(($currentTimestamp - $kickoffTimestamp) / MINUTE_IN_SECONDS));
+        if ($isCurrent && $elapsed === 0) {
+            $elapsed = $this->settings->isSimulationEnabled()
+                ? $this->simulatedElapsedMinutes($date)
+                : max(1, (int) floor(($currentTimestamp - $kickoffTimestamp) / MINUTE_IN_SECONDS));
         }
 
         return [
@@ -721,6 +725,24 @@ final class Shortcode
         return $homeScore . ' - ' . $awayScore;
     }
 
+    private function currentMatchTimestamp(): int
+    {
+        if (!$this->settings->isSimulationEnabled()) {
+            return $this->settings->currentTimestamp();
+        }
+
+        try {
+            $timezone = function_exists('wp_timezone')
+                ? wp_timezone()
+                : new \DateTimeZone(date_default_timezone_get());
+            $date = new \DateTimeImmutable($this->settings->matchDate() . ' ' . $this->settings->matchTime(), $timezone);
+
+            return $date->getTimestamp();
+        } catch (\Exception $exception) {
+            return $this->settings->currentTimestamp();
+        }
+    }
+
     /**
      * @param array<string, mixed> $fixtureData
      */
@@ -750,6 +772,58 @@ final class Shortcode
         $matchWindowEnds = $kickoffTimestamp + (150 * MINUTE_IN_SECONDS);
 
         return $currentTimestamp >= $kickoffTimestamp && $currentTimestamp <= $matchWindowEnds;
+    }
+
+    private function isCurrentSimulatedMatch(string $statusShort, string $fixtureDate): bool
+    {
+        if (in_array($statusShort, ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'], true)) {
+            return true;
+        }
+
+        if (in_array($statusShort, ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD'], true)) {
+            return false;
+        }
+
+        if ($this->fixtureDate(['fixture' => ['date' => $fixtureDate]]) !== $this->settings->matchDate()) {
+            return false;
+        }
+
+        $fixtureMinutes = $this->fixtureDisplayMinutes($fixtureDate);
+        $simulationMinutes = $this->timeToMinutes($this->settings->matchTime());
+
+        if ($fixtureMinutes === null || $simulationMinutes === null) {
+            return false;
+        }
+
+        return $simulationMinutes >= $fixtureMinutes && $simulationMinutes <= ($fixtureMinutes + 150);
+    }
+
+    private function simulatedElapsedMinutes(string $fixtureDate): int
+    {
+        $fixtureMinutes = $this->fixtureDisplayMinutes($fixtureDate);
+        $simulationMinutes = $this->timeToMinutes($this->settings->matchTime());
+
+        if ($fixtureMinutes === null || $simulationMinutes === null) {
+            return 1;
+        }
+
+        return max(1, $simulationMinutes - $fixtureMinutes);
+    }
+
+    private function fixtureDisplayMinutes(string $fixtureDate): ?int
+    {
+        return $this->timeToMinutes($this->formatFixtureTime($fixtureDate));
+    }
+
+    private function timeToMinutes(string $time): ?int
+    {
+        $timestamp = strtotime('1970-01-01 ' . $time);
+
+        if ($timestamp === false) {
+            return null;
+        }
+
+        return ((int) gmdate('G', $timestamp) * 60) + (int) gmdate('i', $timestamp);
     }
 
     /**
@@ -796,9 +870,11 @@ final class Shortcode
             'canada' => 'CAN',
             'chile' => 'CHI',
             'colombia' => 'COL',
+            'costa de marfil' => 'CIV',
             'corea del sur' => 'COR',
             'costa rica' => 'CRC',
             'croacia' => 'CRO',
+            'cabo verde' => 'CPV',
             'dinamarca' => 'DIN',
             'ecuador' => 'ECU',
             'egipto' => 'EGI',
@@ -814,6 +890,7 @@ final class Shortcode
             'irlanda' => 'IRL',
             'italia' => 'ITA',
             'japon' => 'JPN',
+            'jordania' => 'JOR',
             'marruecos' => 'MAR',
             'mexico' => 'MEX',
             'nigeria' => 'NGA',
@@ -825,6 +902,7 @@ final class Shortcode
             'polonia' => 'POL',
             'portugal' => 'POR',
             'qatar' => 'QAT',
+            'republica checa' => 'CZE',
             'senegal' => 'SEN',
             'serbia' => 'SRB',
             'sudafrica' => 'RSA',
@@ -834,6 +912,7 @@ final class Shortcode
             'turquia' => 'TUR',
             'ucrania' => 'UCR',
             'uruguay' => 'URU',
+            'uzbekistan' => 'UZB',
         ];
         $key = $this->normalizeLookupKey($name);
 
@@ -864,59 +943,66 @@ final class Shortcode
     private function localizeTeamName(string $name): string
     {
         $teams = [
-            'Algeria' => 'Argelia',
-            'Argentina' => 'Argentina',
-            'Australia' => 'Australia',
-            'Austria' => 'Austria',
-            'Belgium' => 'Belgica',
-            'Brazil' => 'Brasil',
-            'Cameroon' => 'Camerun',
-            'Canada' => 'Canada',
-            'Chile' => 'Chile',
-            'Colombia' => 'Colombia',
-            'Costa Rica' => 'Costa Rica',
-            'Croatia' => 'Croacia',
-            'Denmark' => 'Dinamarca',
-            'Ecuador' => 'Ecuador',
-            'Egypt' => 'Egipto',
-            'England' => 'Inglaterra',
-            'France' => 'Francia',
-            'Germany' => 'Alemania',
-            'Ghana' => 'Ghana',
-            'Greece' => 'Grecia',
-            'Iran' => 'Iran',
-            'Ireland' => 'Irlanda',
-            'Italy' => 'Italia',
-            'Japan' => 'Japon',
-            'Korea Republic' => 'Corea del Sur',
-            'Mexico' => 'Mexico',
-            'Morocco' => 'Marruecos',
-            'Netherlands' => 'Paises Bajos',
-            'New Zealand' => 'Nueva Zelanda',
-            'Nigeria' => 'Nigeria',
-            'Norway' => 'Noruega',
-            'Paraguay' => 'Paraguay',
-            'Peru' => 'Peru',
-            'Poland' => 'Polonia',
-            'Portugal' => 'Portugal',
-            'Qatar' => 'Qatar',
-            'Saudi Arabia' => 'Arabia Saudita',
-            'Scotland' => 'Escocia',
-            'Senegal' => 'Senegal',
-            'Serbia' => 'Serbia',
-            'South Africa' => 'Sudafrica',
-            'Spain' => 'Espana',
-            'Sweden' => 'Suecia',
-            'Switzerland' => 'Suiza',
-            'Tunisia' => 'Tunez',
-            'Turkey' => 'Turquia',
-            'Ukraine' => 'Ucrania',
-            'United States' => 'Estados Unidos',
-            'Uruguay' => 'Uruguay',
-            'Wales' => 'Gales',
+            'algeria' => 'Argelia',
+            'argentina' => 'Argentina',
+            'australia' => 'Australia',
+            'austria' => 'Austria',
+            'belgium' => 'Belgica',
+            'brazil' => 'Brasil',
+            'cameroon' => 'Camerun',
+            'canada' => 'Canada',
+            'cape verde' => 'Cabo Verde',
+            'cape verde islands' => 'Cabo Verde',
+            'chile' => 'Chile',
+            'colombia' => 'Colombia',
+            'costa rica' => 'Costa Rica',
+            'croatia' => 'Croacia',
+            'czech republic' => 'Republica Checa',
+            'denmark' => 'Dinamarca',
+            'ecuador' => 'Ecuador',
+            'egypt' => 'Egipto',
+            'england' => 'Inglaterra',
+            'france' => 'Francia',
+            'germany' => 'Alemania',
+            'ghana' => 'Ghana',
+            'greece' => 'Grecia',
+            'iran' => 'Iran',
+            'ireland' => 'Irlanda',
+            'italy' => 'Italia',
+            'ivory coast' => 'Costa de Marfil',
+            'japan' => 'Japon',
+            'jordan' => 'Jordania',
+            'korea republic' => 'Corea del Sur',
+            'mexico' => 'Mexico',
+            'morocco' => 'Marruecos',
+            'netherlands' => 'Paises Bajos',
+            'new zealand' => 'Nueva Zelanda',
+            'nigeria' => 'Nigeria',
+            'norway' => 'Noruega',
+            'paraguay' => 'Paraguay',
+            'peru' => 'Peru',
+            'poland' => 'Polonia',
+            'portugal' => 'Portugal',
+            'qatar' => 'Qatar',
+            'saudi arabia' => 'Arabia Saudita',
+            'scotland' => 'Escocia',
+            'senegal' => 'Senegal',
+            'serbia' => 'Serbia',
+            'south africa' => 'Sudafrica',
+            'spain' => 'Espana',
+            'sweden' => 'Suecia',
+            'switzerland' => 'Suiza',
+            'tunisia' => 'Tunez',
+            'turkey' => 'Turquia',
+            'ukraine' => 'Ucrania',
+            'united states' => 'Estados Unidos',
+            'uruguay' => 'Uruguay',
+            'uzbekistan' => 'Uzbekistan',
+            'wales' => 'Gales',
         ];
+        $key = $this->normalizeLookupKey($name);
 
-        return $teams[$name] ?? $name;
+        return $teams[$key] ?? $name;
     }
 
     private function localizeStage(string $stage): string

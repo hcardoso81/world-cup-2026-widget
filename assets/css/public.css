@@ -175,6 +175,8 @@ body .modal-widget-content {
     min-height: 94px;
     min-width: 0;
     padding: 9px 8px;
+    position: relative;
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .wc26-match--ft,
@@ -200,7 +202,19 @@ body .modal-widget-content {
     background: rgba(96, 76, 141, 0.15);
     background: color-mix(in srgb, var(--wc26-main) 15%, transparent);
     border-color: var(--wc26-main);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wc26-main) 28%, transparent);
+    box-shadow: 0 10px 22px rgba(96, 76, 141, 0.22), inset 0 0 0 1px rgba(96, 76, 141, 0.28);
+    transform: scale(1.045);
+    z-index: 2;
+}
+
+.wc26-match--current {
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--wc26-main) 24%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--wc26-main) 34%, transparent);
+}
+
+.wc26-match--current .wc26-match__status span {
+    background: var(--wc26-main);
+    border-color: var(--wc26-main);
+    color: #ffffff;
 }
 
 .wc26-match__status {
