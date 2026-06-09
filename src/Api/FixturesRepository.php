@@ -45,6 +45,7 @@ final class FixturesRepository
             'fetched_at' => isset($data['fetched_at']) ? absint($data['fetched_at']) : time(),
             'expires_at' => time() + $ttl,
             'cache_ttl' => $ttl,
+            'scope' => isset($data['scope']) ? sanitize_key((string) $data['scope']) : 'season',
             'source' => !empty($data['mock']) ? 'mock' : 'api-football',
             'mock' => !empty($data['mock']),
             'errors' => [],
@@ -68,6 +69,7 @@ final class FixturesRepository
                 'fetched_at' => 0,
                 'expires_at' => 0,
                 'cache_ttl' => 0,
+                'scope' => 'season',
                 'source' => 'none',
                 'mock' => false,
             ];

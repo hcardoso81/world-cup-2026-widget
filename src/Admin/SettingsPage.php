@@ -302,7 +302,7 @@ final class SettingsPage
                         <strong><?php echo esc_html__('Current API request:', WC26_WIDGET_TEXT_DOMAIN); ?></strong>
                         <code><?php echo esc_html((new ApiFootballClient($this->settings))->fixturesSeasonUrl()); ?></code>
                     </p>
-                    <p class="description"><?php echo esc_html__('This request is executed by PHP with wp_remote_get and the API key in the x-apisports-key header.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
+                    <p class="description"><?php echo esc_html__('This single season request is executed server-side by PHP at most once per minute, then cached for the shortcode and REST endpoint. The API key is sent only in the x-apisports-key header.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
                 <?php endif; ?>
             <?php endif; ?>
         </section>

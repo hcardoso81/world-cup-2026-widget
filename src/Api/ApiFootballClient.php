@@ -99,6 +99,7 @@ final class ApiFootballClient
         $fixtures = isset($payload['response']) && is_array($payload['response']) ? $payload['response'] : [];
         $data = [
             'date' => $date,
+            'scope' => 'date',
             'fixtures' => $fixtures,
             'fetched_at' => time(),
             'cache_ttl' => SyncPolicy::refreshInterval(),
@@ -176,6 +177,7 @@ final class ApiFootballClient
 
         $fixtures = isset($payload['response']) && is_array($payload['response']) ? $payload['response'] : [];
         $data = [
+            'scope' => 'season',
             'fixtures' => $fixtures,
             'fetched_at' => time(),
             'cache_ttl' => SyncPolicy::refreshInterval(),
@@ -272,6 +274,7 @@ final class ApiFootballClient
                 'total' => 1,
             ],
             'date' => $date,
+            'scope' => 'date',
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),
@@ -310,6 +313,7 @@ final class ApiFootballClient
                 'current' => 1,
                 'total' => 1,
             ],
+            'scope' => 'season',
             'fixtures' => $fixtures,
             'response' => $fixtures,
             'fetched_at' => time(),

@@ -61,6 +61,7 @@ final class FixturesEndpoint
             'visible' => true,
             'mock' => !empty($data['mock']),
             'source' => !empty($data['mock']) ? 'mock' : 'api-football',
+            'scope' => isset($data['scope']) ? sanitize_key((string) $data['scope']) : 'season',
             'active_date' => $this->settings->shortcodeDate(),
             'fixtures' => $fixtures,
             'fixtures_by_date' => $this->groupFixturesByDate($fixtures),
