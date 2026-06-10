@@ -13,7 +13,6 @@ final class Settings
     public const DEFAULT_WIDGET_LANGUAGE = 'es';
     public const DEFAULT_WIDGET_THEME = 'white';
     public const DEFAULT_WIDGET_REFRESH = 60;
-    public const DEFAULT_FRONTEND_POLL_INTERVAL = 60;
     public const DEFAULT_MATCH_DATE = '2026-06-08';
     public const DEFAULT_MATCH_TIME = '12:00';
     private const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
@@ -35,7 +34,6 @@ final class Settings
             'match_time' => self::DEFAULT_MATCH_TIME,
             'frontend_visible' => 1,
             'matches_per_line' => 4,
-            'frontend_poll_interval' => self::DEFAULT_FRONTEND_POLL_INTERVAL,
             'simulation_enabled' => 0,
         ];
     }
@@ -141,13 +139,6 @@ final class Settings
         return $this->sanitizeMatchesPerLine($settings['matches_per_line'] ?? 4);
     }
 
-    public function frontendPollInterval(): int
-    {
-        $settings = $this->all();
-
-        return $this->sanitizeFrontendPollInterval($settings['frontend_poll_interval'] ?? self::DEFAULT_FRONTEND_POLL_INTERVAL);
-    }
-
     public function isSimulationEnabled(): bool
     {
         $settings = $this->all();
@@ -191,7 +182,6 @@ final class Settings
             'match_time' => $this->sanitizeTime(isset($input['match_time']) ? (string) $input['match_time'] : self::DEFAULT_MATCH_TIME),
             'frontend_visible' => !empty($input['frontend_visible']) ? 1 : 0,
             'matches_per_line' => $this->sanitizeMatchesPerLine($input['matches_per_line'] ?? 4),
-            'frontend_poll_interval' => $this->sanitizeFrontendPollInterval($input['frontend_poll_interval'] ?? self::DEFAULT_FRONTEND_POLL_INTERVAL),
             'simulation_enabled' => !empty($input['simulation_enabled']) ? 1 : 0,
         ];
     }
@@ -311,23 +301,5 @@ final class Settings
         }
 
         return $amount;
-    }
-
-    /**
-     * @param mixed $value
-     */
-    private function sanitizeFrontendPollInterval($value): int
-    {
-        $seconds = absint($value);
-
-        if ($seconds < 15) {
-            return 15;
-        }
-
-        if ($seconds > 3600) {
-            return 3600;
-        }
-
-        return $seconds;
     }
 }

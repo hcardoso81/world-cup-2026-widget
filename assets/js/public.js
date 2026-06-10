@@ -6,6 +6,10 @@
             return Promise.resolve(null);
         }
 
+        if (!force && window.WC26Widget.fixturesPayload) {
+            return Promise.resolve(window.WC26Widget.fixturesPayload);
+        }
+
         if (window.WC26Widget.fixturesPromise) {
             return window.WC26Widget.fixturesPromise;
         }
@@ -294,8 +298,6 @@
     }
 
     function schedulePoll(interval) {
-        var jitter = Math.floor(Math.random() * 15000);
-
         pollTimer = window.setTimeout(function () {
             if (document.visibilityState === 'visible') {
                 fetchFixtures(true).then(function () {
@@ -306,7 +308,7 @@
             }
 
             schedulePoll(interval);
-        }, (interval * 1000) + jitter);
+        }, interval * 1000);
     }
 
     function stopPolling() {

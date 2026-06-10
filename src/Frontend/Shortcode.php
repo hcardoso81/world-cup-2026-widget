@@ -7,6 +7,7 @@ namespace HernanCardoso\WorldCup2026Widget\Frontend;
 use HernanCardoso\WorldCup2026Widget\Api\ApiFootballClient;
 use HernanCardoso\WorldCup2026Widget\Api\FixturesEndpoint;
 use HernanCardoso\WorldCup2026Widget\Api\FixturesSyncService;
+use HernanCardoso\WorldCup2026Widget\Api\SyncPolicy;
 use HernanCardoso\WorldCup2026Widget\Support\Settings;
 use WP_Error;
 
@@ -271,7 +272,7 @@ final class Shortcode
         <section id="<?php echo esc_attr($carouselId); ?>" class="<?php echo esc_attr(implode(' ', $classes)); ?>" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>; --wc26-banner-max-width: <?php echo esc_attr((string) $bannerMaxWidth); ?>px;" data-wc26-carousel aria-label="<?php echo esc_attr__('World Cup matches by day', WC26_WIDGET_TEXT_DOMAIN); ?>">
             <?php if ($layout === 'banner') : ?>
                 <div class="widget-title block-head block-head-ac block-head block-head-ac block-head-g is-left has-style">
-                    <h5 class="heading"><?php echo esc_html__('Copa del Mundo 2026 en vivo', WC26_WIDGET_TEXT_DOMAIN); ?></h5>
+                    <h5 class="heading"><?php echo esc_html__('Fixture Mundial 2026 | Edicion Especial de Campanas Mundialistas', WC26_WIDGET_TEXT_DOMAIN); ?></h5>
                 </div>
             <?php endif; ?>
 
@@ -387,7 +388,7 @@ final class Shortcode
             'wc26-widget-public',
             'window.WC26Widget = ' . wp_json_encode([
                 'fixturesUrl' => esc_url_raw(rest_url(FixturesEndpoint::NAMESPACE . FixturesEndpoint::ROUTE)),
-                'pollInterval' => $this->settings->frontendPollInterval(),
+                'pollInterval' => SyncPolicy::refreshInterval(),
             ]) . ';',
             'before'
         );
