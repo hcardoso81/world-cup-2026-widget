@@ -250,6 +250,21 @@ final class SettingsPage
                 </select>
             </p>
             <p class="description"><?php echo esc_html__('Tambien podes sobrescribirlo en el shortcode con amount_match_per_line="4", "3", "2" o "1".', WC26_WIDGET_TEXT_DOMAIN); ?></p>
+            <p>
+                <label for="wc26_widget_frontend_poll_interval"><?php echo esc_html__('Actualizar front cada', WC26_WIDGET_TEXT_DOMAIN); ?></label>
+                <input
+                    id="wc26_widget_frontend_poll_interval"
+                    class="small-text"
+                    type="number"
+                    min="15"
+                    max="3600"
+                    step="1"
+                    name="<?php echo esc_attr(Settings::OPTION_NAME); ?>[frontend_poll_interval]"
+                    value="<?php echo esc_attr((string) ($settings['frontend_poll_interval'] ?? Settings::DEFAULT_FRONTEND_POLL_INTERVAL)); ?>"
+                />
+                <?php echo esc_html__('segundos', WC26_WIDGET_TEXT_DOMAIN); ?>
+            </p>
+            <p class="description"><?php echo esc_html__('El navegador consulta el endpoint local del plugin con este intervalo. API-Football sigue protegida por cache y lock server-side.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <p class="description">
                 <?php echo esc_html__('Fecha normal del shortcode:', WC26_WIDGET_TEXT_DOMAIN); ?>
                 <code><?php echo esc_html($this->settings->currentArgentinaDate()); ?></code>
@@ -326,6 +341,7 @@ final class SettingsPage
                 '[world_cup_2026_matches amount_match_per_line="%d"]',
                 $this->settings->matchesPerLine()
             ),
+            __('Full-width matches banner', WC26_WIDGET_TEXT_DOMAIN) => '[world_cup_2026_matches_banner amount_match_per_line="5"]',
         ];
     }
 

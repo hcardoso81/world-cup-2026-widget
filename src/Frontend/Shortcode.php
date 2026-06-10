@@ -37,6 +37,7 @@ final class Shortcode
         add_shortcode('world_cup_2026_player', [$this, 'renderDisabledOfficialWidget']);
         add_shortcode('world_cup_2026_team', [$this, 'renderDisabledOfficialWidget']);
         add_shortcode('world_cup_2026_matches', [$this, 'renderMatches']);
+        add_shortcode('world_cup_2026_matches_banner', [$this, 'renderMatchesBanner']);
     }
 
     /**
@@ -212,6 +213,22 @@ final class Shortcode
      */
     public function renderMatches($atts = []): string
     {
+        return $this->renderMatchesCarousel($atts, 'world_cup_2026_matches', 'standard', 4, $this->settings->matchesPerLine());
+    }
+
+    /**
+     * @param array<string, mixed>|string $atts
+     */
+    public function renderMatchesBanner($atts = []): string
+    {
+        return $this->renderMatchesCarousel($atts, 'world_cup_2026_matches_banner', 'banner', 5, 5);
+    }
+
+    /**
+     * @param array<string, mixed>|string $atts
+     */
+    private function renderMatchesCarousel($atts, string $shortcode, string $layout, int $maxPerLine, int $defaultPerLine): string
+    {
         if (!$this->settings->isFrontendVisible()) {
             return '';
         }
@@ -220,15 +237,15 @@ final class Shortcode
             [
                 'date' => $this->settings->shortcodeDate(),
                 'amount_match_per_line' => '',
-                'matches_per_line' => $this->settings->matchesPerLine(),
+                'matches_per_line' => $defaultPerLine,
             ],
             is_array($atts) ? $atts : [],
-            'world_cup_2026_matches'
+            $shortcode
         );
 
         $matchesPerLine = (string) $atts['amount_match_per_line'] !== ''
-            ? $this->sanitizeMatchesPerLine($atts['amount_match_per_line'])
-            : $this->sanitizeMatchesPerLine($atts['matches_per_line']);
+            ? $this->sanitizeMatchesPerLine($atts['amount_match_per_line'], $maxPerLine)
+            : $this->sanitizeMatchesPerLine($atts['matches_per_line'], $maxPerLine);
         $date = $this->settings->isSimulationEnabled()
             ? $this->settings->sanitizeDate((string) $atts['date'])
             : $this->settings->currentArgentinaDate();
@@ -246,10 +263,18 @@ final class Shortcode
         $activeDate = $this->activeCarouselDate($dates, $date);
         $carouselId = $this->nextId('wc26-matches-carousel');
         $currentTimestamp = $this->currentMatchTimestamp();
+        $classes = ['wc26-matches', 'wc26-matches--' . $layout];
+        $bannerMaxWidth = ($matchesPerLine * 220) + (($matchesPerLine - 1) * 8);
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr($carouselId); ?>" class="wc26-matches" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>;" data-wc26-carousel aria-label="<?php echo esc_attr__('World Cup matches by day', WC26_WIDGET_TEXT_DOMAIN); ?>">
+        <section id="<?php echo esc_attr($carouselId); ?>" class="<?php echo esc_attr(implode(' ', $classes)); ?>" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>; --wc26-banner-max-width: <?php echo esc_attr((string) $bannerMaxWidth); ?>px;" data-wc26-carousel aria-label="<?php echo esc_attr__('World Cup matches by day', WC26_WIDGET_TEXT_DOMAIN); ?>">
+            <?php if ($layout === 'banner') : ?>
+                <div class="widget-title block-head block-head-ac block-head block-head-ac block-head-g is-left has-style">
+                    <h5 class="heading"><?php echo esc_html__('Copa del Mundo 2026 en vivo', WC26_WIDGET_TEXT_DOMAIN); ?></h5>
+                </div>
+            <?php endif; ?>
+
             <?php if ($fixturesByDate === []) : ?>
                 <p class="wc26-matches__empty"><?php echo esc_html__('No matches found for this date.', WC26_WIDGET_TEXT_DOMAIN); ?></p>
             <?php else : ?>
@@ -362,6 +387,7 @@ final class Shortcode
             'wc26-widget-public',
             'window.WC26Widget = ' . wp_json_encode([
                 'fixturesUrl' => esc_url_raw(rest_url(FixturesEndpoint::NAMESPACE . FixturesEndpoint::ROUTE)),
+                'pollInterval' => $this->settings->frontendPollInterval(),
             ]) . ';',
             'before'
         );
@@ -481,16 +507,17 @@ final class Shortcode
     /**
      * @param mixed $amount
      */
-    private function sanitizeMatchesPerLine($amount): int
+    private function sanitizeMatchesPerLine($amount, int $max = 4): int
     {
         $amount = absint($amount);
+        $max = max(1, $max);
 
         if ($amount < 1) {
             return 1;
         }
 
-        if ($amount > 4) {
-            return 4;
+        if ($amount > $max) {
+            return $max;
         }
 
         return $amount;
@@ -597,19 +624,19 @@ final class Shortcode
 
         ob_start();
         ?>
-        <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
+        <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-match-id="<?php echo esc_attr((string) $match['id']); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
-                <span><?php echo esc_html(strtoupper($statusLabel)); ?></span>
+                <span data-wc26-status-label><?php echo esc_html(strtoupper($statusLabel)); ?></span>
                 <?php if ($elapsed > 0 && !in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
+                    <strong data-wc26-status-extra><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
                 <?php elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
+                    <strong data-wc26-status-extra><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
                 <?php endif; ?>
             </div>
 
             <div class="wc26-match__scoreboard">
                 <?php echo $this->renderScoreTeam($match['homeTeam'], $match['homeLogo'], 'home'); ?>
-                <strong class="wc26-match__score"><?php echo esc_html($score); ?></strong>
+                <strong class="wc26-match__score" data-wc26-score><?php echo esc_html($score); ?></strong>
                 <?php echo $this->renderScoreTeam($match['awayTeam'], $match['awayLogo'], 'away'); ?>
             </div>
 
