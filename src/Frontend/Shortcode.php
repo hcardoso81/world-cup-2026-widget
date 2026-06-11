@@ -272,7 +272,7 @@ final class Shortcode
         <section id="<?php echo esc_attr($carouselId); ?>" class="<?php echo esc_attr(implode(' ', $classes)); ?>" style="--wc26-matches-per-line: <?php echo esc_attr((string) $matchesPerLine); ?>; --wc26-banner-max-width: <?php echo esc_attr((string) $bannerMaxWidth); ?>px;" data-wc26-carousel aria-label="<?php echo esc_attr__('World Cup matches by day', WC26_WIDGET_TEXT_DOMAIN); ?>">
             <?php if ($layout === 'banner') : ?>
                 <div class="widget-title block-head block-head-ac block-head block-head-ac block-head-g is-left has-style">
-                    <h5 class="heading"><?php echo esc_html__('Fixture Mundial 2026 | Edicion Especial de Campanas Mundialistas', WC26_WIDGET_TEXT_DOMAIN); ?></h5>
+                    <h5 class="heading"><?php echo esc_html__('Fixture Mundial 2026 | minuto a minuto', WC26_WIDGET_TEXT_DOMAIN); ?></h5>
                 </div>
             <?php endif; ?>
 
