@@ -609,7 +609,7 @@ final class Shortcode
     {
         $match = $this->fixtureModel($fixture, $currentTimestamp);
         $statusShort = $match['status'];
-        $statusLabel = $match['isCurrent'] ? __('En juego', WC26_WIDGET_TEXT_DOMAIN) : $this->statusLabel($statusShort);
+        $statusLabel = $this->displayStatusLabel($statusShort, $match['isCurrent']);
         $elapsed = $match['elapsed'];
         $date = $match['date'];
         $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true) && !$match['isCurrent'];
@@ -625,13 +625,13 @@ final class Shortcode
 
         ob_start();
         ?>
-        <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-match-id="<?php echo esc_attr((string) $match['id']); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
+        <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-match-id="<?php echo esc_attr((string) $match['id']); ?>" data-wc26-kickoff="<?php echo esc_attr($date); ?>" data-wc26-tooltip-home="<?php echo esc_attr((string) $match['homeTeam']); ?>" data-wc26-tooltip-away="<?php echo esc_attr((string) $match['awayTeam']); ?>" data-wc26-tooltip-stage="<?php echo esc_attr((string) $match['stage']); ?>" data-wc26-tooltip-stadium="<?php echo esc_attr((string) $match['stadium']); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
                 <span data-wc26-status-label><?php echo esc_html(strtoupper($statusLabel)); ?></span>
-                <?php if ($elapsed > 0 && !in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
+                <?php if ($elapsed > 0 && !in_array($statusShort, ['HT', 'FT', 'AET', 'PEN'], true)) : ?>
                     <strong data-wc26-status-extra><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
                 <?php elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong data-wc26-status-extra><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
+                    <strong data-wc26-status-extra data-wc26-kickoff-time><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
                 <?php endif; ?>
             </div>
 
@@ -1098,6 +1098,19 @@ final class Shortcode
         ];
 
         return $labels[$status] ?? $status;
+    }
+
+    private function displayStatusLabel(string $status, bool $isCurrent): string
+    {
+        if (!$isCurrent) {
+            return $this->statusLabel($status);
+        }
+
+        if (in_array($status, ['HT', 'BT', 'P', 'SUSP', 'INT'], true)) {
+            return $this->statusLabel($status);
+        }
+
+        return __('En juego', WC26_WIDGET_TEXT_DOMAIN);
     }
 
     private function formatDate(string $date): string

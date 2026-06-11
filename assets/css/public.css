@@ -292,6 +292,15 @@ body .modal-widget-content {
     background: transparent;
 }
 
+.wc26-match--current .wc26-match__status span,
+.wc26-match--current.wc26-match--1h .wc26-match__status span,
+.wc26-match--current.wc26-match--2h .wc26-match__status span,
+.wc26-match--current.wc26-match--live .wc26-match__status span {
+    background: var(--wc26-main);
+    border-color: var(--wc26-main);
+    color: #ffffff;
+}
+
 .wc26-match--1h .wc26-match__status strong,
 .wc26-match--2h .wc26-match__status strong,
 .wc26-match--live .wc26-match__status strong {

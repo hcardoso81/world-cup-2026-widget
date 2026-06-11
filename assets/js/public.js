@@ -185,7 +185,12 @@
             score.textContent = model.score;
         }
 
+        if (fixtureData.date) {
+            card.setAttribute('data-wc26-kickoff', fixtureData.date);
+        }
+
         setStatusClasses(card, model.status, model.isCurrent);
+        updateMatchTooltip(card);
     }
 
     function fixtureModel(fixture) {
@@ -201,7 +206,7 @@
 
         return {
             status: statusShort,
-            statusLabel: isCurrent ? 'En juego' : statusText(statusShort),
+            statusLabel: displayStatusLabel(statusShort, isCurrent),
             statusExtra: statusExtra(statusShort, elapsed, fixtureData.date || ''),
             score: isNotStarted ? '-' : formatScore(goals, penalties),
             isCurrent: isCurrent,
@@ -220,7 +225,7 @@
     }
 
     function statusExtra(status, elapsed, date) {
-        if (elapsed > 0 && ['FT', 'AET', 'PEN'].indexOf(status) === -1) {
+        if (elapsed > 0 && ['HT', 'FT', 'AET', 'PEN'].indexOf(status) === -1) {
             return String(elapsed) + "'";
         }
 
@@ -259,6 +264,37 @@
         });
     }
 
+    function localizeFixtureTimes(scope) {
+        scope.querySelectorAll('[data-wc26-kickoff-time]').forEach(function (timeNode) {
+            var card = timeNode.closest('[data-wc26-kickoff]');
+            var kickoff = card ? card.getAttribute('data-wc26-kickoff') : '';
+            var localTime = formatTime(kickoff);
+
+            if (localTime) {
+                timeNode.textContent = localTime;
+            }
+        });
+
+        scope.querySelectorAll('[data-wc26-match-id]').forEach(updateMatchTooltip);
+    }
+
+    function updateMatchTooltip(card) {
+        var teams = [
+            card.getAttribute('data-wc26-tooltip-home') || '',
+            card.getAttribute('data-wc26-tooltip-away') || '',
+        ].filter(Boolean).join(' vs ');
+        var parts = [
+            teams,
+            formatTime(card.getAttribute('data-wc26-kickoff') || ''),
+            card.getAttribute('data-wc26-tooltip-stage') || '',
+            card.getAttribute('data-wc26-tooltip-stadium') || '',
+        ].filter(Boolean);
+
+        if (parts.length > 0) {
+            card.setAttribute('data-wc26-tooltip', parts.join(' - '));
+        }
+    }
+
     function isLiveStatus(status) {
         return ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'].indexOf(status) !== -1;
     }
@@ -284,6 +320,18 @@
         };
 
         return labels[status] || status;
+    }
+
+    function displayStatusLabel(status, isCurrent) {
+        if (!isCurrent) {
+            return statusText(status);
+        }
+
+        if (['HT', 'BT', 'P', 'SUSP', 'INT'].indexOf(status) !== -1) {
+            return statusText(status);
+        }
+
+        return 'En juego';
     }
 
     function startPolling() {
@@ -319,6 +367,7 @@
     }
 
     function init() {
+        localizeFixtureTimes(document);
         document.querySelectorAll('[data-wc26-carousel]').forEach(initCarousel);
         startPolling();
     }
