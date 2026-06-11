@@ -611,6 +611,7 @@ final class Shortcode
         $statusShort = $match['status'];
         $statusLabel = $this->displayStatusLabel($statusShort, $match['isCurrent']);
         $elapsed = $match['elapsed'];
+        $extra = $match['extra'];
         $date = $match['date'];
         $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true) && !$match['isCurrent'];
         $statusExtra = '';
@@ -621,9 +622,9 @@ final class Shortcode
             'wc26-match--' . strtolower($statusShort),
         ];
 
-        if ($elapsed > 0 && !in_array($statusShort, ['HT', 'FT', 'AET', 'PEN'], true)) {
-            $statusExtra = sprintf("%d'", $elapsed);
-        } elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) {
+        if ($elapsed > 0 && $statusShort !== 'HT') {
+            $statusExtra = $this->formatElapsedTime($elapsed, $extra);
+        } elseif ($isNotStarted) {
             $statusExtra = $this->formatFixtureTime($date);
             $statusExtraIsKickoffTime = true;
         }
@@ -679,6 +680,7 @@ final class Shortcode
      *     status:string,
      *     statusLabel:string,
      *     elapsed:int,
+     *     extra:int,
      *     isCurrent:bool,
      *     penalties:array{home:int|null,away:int|null}
      * }
@@ -702,6 +704,7 @@ final class Shortcode
             ? $this->isCurrentSimulatedMatch($statusShort, $date)
             : $this->isCurrentMatch($statusShort, $kickoffTimestamp, $currentTimestamp);
         $elapsed = isset($status['elapsed']) ? absint($status['elapsed']) : 0;
+        $extra = isset($status['extra']) ? absint($status['extra']) : 0;
 
         if ($isCurrent && $elapsed === 0) {
             $elapsed = $this->settings->isSimulationEnabled()
@@ -723,6 +726,7 @@ final class Shortcode
             'status' => $statusShort,
             'statusLabel' => isset($status['long']) ? (string) $status['long'] : $this->statusLabel($statusShort),
             'elapsed' => $elapsed,
+            'extra' => $extra,
             'isCurrent' => $isCurrent,
             'penalties' => [
                 'home' => $this->nullableInt($penalties['home'] ?? null),
@@ -1116,6 +1120,15 @@ final class Shortcode
         }
 
         return __('En juego', WC26_WIDGET_TEXT_DOMAIN);
+    }
+
+    private function formatElapsedTime(int $elapsed, int $extra): string
+    {
+        if ($extra > 0) {
+            return sprintf("%d+%d'", $elapsed, $extra);
+        }
+
+        return sprintf("%d'", $elapsed);
     }
 
     private function formatDate(string $date): string

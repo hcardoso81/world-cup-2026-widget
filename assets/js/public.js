@@ -1,5 +1,6 @@
 (function () {
     var pollTimer = null;
+    var lastPollAttempt = 0;
 
     function fetchFixtures(force) {
         if (!window.WC26Widget || !window.WC26Widget.fixturesUrl || !window.fetch) {
@@ -10,7 +11,7 @@
             return Promise.resolve(window.WC26Widget.fixturesPayload);
         }
 
-        if (window.WC26Widget.fixturesPromise) {
+        if (!force && window.WC26Widget.fixturesPromise) {
             return window.WC26Widget.fixturesPromise;
         }
 
@@ -150,9 +151,9 @@
             });
         }
 
-        fetchFixtures().then(function (payload) {
-            carousel.wc26FixturesPayload = payload;
-        });
+        if (window.WC26Widget && window.WC26Widget.fixturesPayload) {
+            carousel.wc26FixturesPayload = window.WC26Widget.fixturesPayload;
+        }
     }
 
     function updateCarousels(payload) {
@@ -234,13 +235,14 @@
         var penalties = score.penalty || {};
         var statusShort = String(status.short || 'NS');
         var elapsed = Number(status.elapsed || 0);
+        var extra = Number(status.extra || 0);
         var isCurrent = isLiveStatus(statusShort);
         var isNotStarted = (statusShort === 'NS' || statusShort === 'TBD') && !isCurrent;
 
         return {
             status: statusShort,
             statusLabel: displayStatusLabel(statusShort, isCurrent),
-            statusExtra: statusExtra(statusShort, elapsed, fixtureData.date || ''),
+            statusExtra: statusExtra(statusShort, elapsed, extra, fixtureData.date || ''),
             score: isNotStarted ? '-' : formatScore(goals, penalties),
             isCurrent: isCurrent,
         };
@@ -257,16 +259,24 @@
         card.classList.toggle('wc26-match--current', isCurrent);
     }
 
-    function statusExtra(status, elapsed, date) {
-        if (elapsed > 0 && ['HT', 'FT', 'AET', 'PEN'].indexOf(status) === -1) {
-            return String(elapsed) + "'";
+    function statusExtra(status, elapsed, extra, date) {
+        if (elapsed > 0 && status !== 'HT') {
+            return formatElapsedTime(elapsed, extra);
         }
 
-        if (status === 'NS' || status === 'TBD' || ['FT', 'AET', 'PEN'].indexOf(status) !== -1) {
+        if (status === 'NS' || status === 'TBD') {
             return formatTime(date);
         }
 
         return '';
+    }
+
+    function formatElapsedTime(elapsed, extra) {
+        if (extra > 0) {
+            return String(elapsed) + '+' + String(extra) + "'";
+        }
+
+        return String(elapsed) + "'";
     }
 
     function formatScore(goals, penalties) {
@@ -375,12 +385,28 @@
         }
 
         stopPolling();
-        fetchFixtures(true);
+        pollNow();
         pollTimer = window.setInterval(function () {
-            if (document.visibilityState === 'visible') {
-                fetchFixtures(true);
+            if (Date.now() - lastPollAttempt >= interval * 1000) {
+                pollNow();
             }
-        }, interval * 1000);
+        }, 5000);
+
+        window.addEventListener('focus', pollIfDue);
+        document.addEventListener('visibilitychange', pollIfDue);
+    }
+
+    function pollIfDue() {
+        var interval = Number(window.WC26Widget && window.WC26Widget.pollInterval ? window.WC26Widget.pollInterval : 60);
+
+        if (Date.now() - lastPollAttempt >= interval * 1000) {
+            pollNow();
+        }
+    }
+
+    function pollNow() {
+        lastPollAttempt = Date.now();
+        fetchFixtures(true);
     }
 
     function stopPolling() {
@@ -388,6 +414,9 @@
             window.clearInterval(pollTimer);
             pollTimer = null;
         }
+
+        window.removeEventListener('focus', pollIfDue);
+        document.removeEventListener('visibilitychange', pollIfDue);
     }
 
     function init() {

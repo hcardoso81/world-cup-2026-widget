@@ -2,7 +2,7 @@
 /**
  * Plugin Name: World Cup 2026 Widget
  * Description: WordPress shortcode that renders elegant FIFA World Cup match cards by date using API-Football fixtures.
- * Version: 1.0.4
+ * Version: 1.0.12
  * Author: Hernan Cardoso
  * Author URI: https://www.linkedin.com/in/cardosohernan/
  * CV online: https://hcardoso81.github.io/professionalIdentity/
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('WC26_WIDGET_VERSION', '1.0.4');
+define('WC26_WIDGET_VERSION', '1.0.12');
 define('WC26_WIDGET_PATH', plugin_dir_path(__FILE__));
 define('WC26_WIDGET_URL', plugin_dir_url(__FILE__));
 define('WC26_WIDGET_BASENAME', plugin_basename(__FILE__));
