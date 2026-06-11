@@ -613,11 +613,20 @@ final class Shortcode
         $elapsed = $match['elapsed'];
         $date = $match['date'];
         $isNotStarted = in_array($statusShort, ['NS', 'TBD'], true) && !$match['isCurrent'];
+        $statusExtra = '';
+        $statusExtraIsKickoffTime = false;
         $score = $isNotStarted ? '-' : $this->formatScore($match);
         $classes = [
             'wc26-match',
             'wc26-match--' . strtolower($statusShort),
         ];
+
+        if ($elapsed > 0 && !in_array($statusShort, ['HT', 'FT', 'AET', 'PEN'], true)) {
+            $statusExtra = sprintf("%d'", $elapsed);
+        } elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) {
+            $statusExtra = $this->formatFixtureTime($date);
+            $statusExtraIsKickoffTime = true;
+        }
 
         if ($match['isCurrent']) {
             $classes[] = 'wc26-match--current';
@@ -628,11 +637,7 @@ final class Shortcode
         <article class="<?php echo esc_attr(implode(' ', $classes)); ?>" data-wc26-match-id="<?php echo esc_attr((string) $match['id']); ?>" data-wc26-kickoff="<?php echo esc_attr($date); ?>" data-wc26-tooltip-home="<?php echo esc_attr((string) $match['homeTeam']); ?>" data-wc26-tooltip-away="<?php echo esc_attr((string) $match['awayTeam']); ?>" data-wc26-tooltip-stage="<?php echo esc_attr((string) $match['stage']); ?>" data-wc26-tooltip-stadium="<?php echo esc_attr((string) $match['stadium']); ?>" data-wc26-tooltip="<?php echo esc_attr($this->matchTooltip($match)); ?>">
             <div class="wc26-match__status">
                 <span data-wc26-status-label><?php echo esc_html(strtoupper($statusLabel)); ?></span>
-                <?php if ($elapsed > 0 && !in_array($statusShort, ['HT', 'FT', 'AET', 'PEN'], true)) : ?>
-                    <strong data-wc26-status-extra><?php echo esc_html(sprintf("%d'", $elapsed)); ?></strong>
-                <?php elseif ($isNotStarted || in_array($statusShort, ['FT', 'AET', 'PEN'], true)) : ?>
-                    <strong data-wc26-status-extra data-wc26-kickoff-time><?php echo esc_html($this->formatFixtureTime($date)); ?></strong>
-                <?php endif; ?>
+                <strong data-wc26-status-extra <?php echo $statusExtraIsKickoffTime ? 'data-wc26-kickoff-time' : ''; ?> <?php echo $statusExtra === '' ? 'hidden' : ''; ?>><?php echo esc_html($statusExtra); ?></strong>
             </div>
 
             <div class="wc26-match__scoreboard">

@@ -14,12 +14,23 @@
             return window.WC26Widget.fixturesPromise;
         }
 
-        window.WC26Widget.fixturesPromise = window.fetch(cacheBustedUrl(window.WC26Widget.fixturesUrl), {
+        var timeout = null;
+        var fetchOptions = {
             credentials: 'same-origin',
             headers: {
                 Accept: 'application/json',
             },
-        })
+        };
+
+        if (window.AbortController) {
+            var controller = new AbortController();
+            fetchOptions.signal = controller.signal;
+            timeout = window.setTimeout(function () {
+                controller.abort();
+            }, 20000);
+        }
+
+        window.WC26Widget.fixturesPromise = window.fetch(cacheBustedUrl(window.WC26Widget.fixturesUrl), fetchOptions)
             .then(function (response) {
                 if (!response.ok) {
                     throw new Error('Fixture request failed');
@@ -37,6 +48,10 @@
                 return null;
             })
             .finally(function () {
+                if (timeout) {
+                    window.clearTimeout(timeout);
+                }
+
                 window.WC26Widget.fixturesPromise = null;
             });
 
@@ -177,9 +192,7 @@
             statusLabel.textContent = model.statusLabel.toUpperCase();
         }
 
-        if (statusExtra) {
-            statusExtra.textContent = model.statusExtra;
-        }
+        statusExtra = updateStatusExtraNode(card, statusExtra, model.statusExtra);
 
         if (score) {
             score.textContent = model.score;
@@ -191,6 +204,26 @@
 
         setStatusClasses(card, model.status, model.isCurrent);
         updateMatchTooltip(card);
+    }
+
+    function updateStatusExtraNode(card, statusExtra, value) {
+        if (!statusExtra) {
+            var statusWrap = card.querySelector('.wc26-match__status');
+
+            if (!statusWrap) {
+                return null;
+            }
+
+            statusExtra = document.createElement('strong');
+            statusExtra.setAttribute('data-wc26-status-extra', '');
+            statusWrap.appendChild(statusExtra);
+        }
+
+        statusExtra.removeAttribute('data-wc26-kickoff-time');
+        statusExtra.textContent = value;
+        statusExtra.hidden = value === '';
+
+        return statusExtra;
     }
 
     function fixtureModel(fixture) {
@@ -342,26 +375,17 @@
         }
 
         stopPolling();
-        schedulePoll(interval);
-    }
-
-    function schedulePoll(interval) {
-        pollTimer = window.setTimeout(function () {
+        fetchFixtures(true);
+        pollTimer = window.setInterval(function () {
             if (document.visibilityState === 'visible') {
-                fetchFixtures(true).then(function () {
-                    schedulePoll(interval);
-                });
-
-                return;
+                fetchFixtures(true);
             }
-
-            schedulePoll(interval);
         }, interval * 1000);
     }
 
     function stopPolling() {
         if (pollTimer) {
-            window.clearTimeout(pollTimer);
+            window.clearInterval(pollTimer);
             pollTimer = null;
         }
     }
