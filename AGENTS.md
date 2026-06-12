@@ -54,6 +54,8 @@ El plugin expone un endpoint tipo fetch en:
 
 El endpoint siempre responde datos reales desde API-Football usando PHP como proxy server-side y la cache compartida. Nunca exponer la API key al navegador.
 
+El JS publico puede hacer polling contra este endpoint local para refrescar estados, marcador y minutos sin recargar la pagina. Ese polling debe respetar `SyncPolicy::refreshInterval()` via `window.WC26Widget.pollInterval`; API-Football sigue protegido por cache y lock server-side.
+
 ## Cache y Sincronizacion
 
 La estrategia principal de datos debe ser server-side:
@@ -109,6 +111,8 @@ El shortcode propio renderiza cards por dia dentro de un carrusel local, sin cac
 - `status`
 - `statusLabel`
 - `elapsed`
+- `extra`
+- `statusExtra`
 - `isCurrent`
 - `penalties`
 
@@ -118,7 +122,11 @@ Puede haber logica de `current match`, pero solo para destacar visualmente sin c
 
 Una card es current match si API-Football informa un estado live (`1H`, `HT`, `2H`, `ET`, `BT`, `P`, `SUSP`, `INT`, `LIVE`) o si, en modo simulacion, la fecha/hora simulada cae entre el kickoff y 150 minutos despues. Este modo de simulacion es solo para testing/demo visual y no debe modificar los datos crudos de API.
 
+El estado visible debe localizarse al espanol. Para partidos live mostrar `En juego` salvo estados de pausa/interrupcion que tienen etiqueta propia (`HT`, `BT`, `P`, `SUSP`, `INT`). El texto extra del estado muestra hora de kickoff para `NS`/`TBD` y minutos transcurridos cuando API-Football envia `elapsed`, incluyendo partidos finalizados; en `HT` no se debe duplicar el minuto como extra.
+
 La navegacion por dias debe funcionar como carrusel con botones anterior/siguiente. La API no debe llamarse al avanzar o retroceder dias; todo debe salir de los fixtures ya renderizados.
+
+El polling no debe reconstruir todo el carrusel ni cambiar el dia activo. Debe actualizar in-place las cards existentes por `data-wc26-match-id`: etiqueta de estado, estado extra, marcador, clases `wc26-match--{status}` / `wc26-match--current`, kickoff y tooltip global.
 
 Los botones del carrusel deben estar en la misma linea que la grilla de partidos, alineados verticalmente al centro. La fecha visible debe mostrarse debajo de los partidos, mas chica y alineada a la derecha.
 
